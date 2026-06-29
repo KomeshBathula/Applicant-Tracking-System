@@ -48,7 +48,7 @@ const Landing = () => {
                                 Find open jobs, submit your application, and keep track of your status.
                             </p>
                         </div>
-                        <Link to="/login" className="btn btn-primary btn-block" style={{ textDecoration: 'none', textAlign: 'center' }}>
+                        <Link to="/candidate/login" className="btn btn-primary btn-block" style={{ textDecoration: 'none', textAlign: 'center' }}>
                             Join as Candidate
                         </Link>
                     </div>

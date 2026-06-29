@@ -131,7 +131,7 @@ const Login = () => {
                 </form>
 
                 <p className="auth-footer">
-                    New candidate? <Link to="/register">Create an account</Link>
+                    New candidate? <Link to="/candidate/register">Create an account</Link>
                 </p>
                 <p className="auth-footer" style={{ marginTop: '0.5rem' }}>
                     <Link to="/" style={{ color: 'var(--text-secondary)' }}>← Back to selection</Link>

@@ -24,8 +24,10 @@ function App() {
                     <Route path="/" element={<Landing />} />
 
                     {/* Candidate Portal Routes */}
-                    <Route path="/login" element={<CandidateLogin />} />
-                    <Route path="/register" element={<CandidateRegister />} />
+                    <Route path="/login" element={<Navigate to="/candidate/login" replace />} />
+                    <Route path="/register" element={<Navigate to="/candidate/register" replace />} />
+                    <Route path="/candidate/login" element={<CandidateLogin />} />
+                    <Route path="/candidate/register" element={<CandidateRegister />} />
                     <Route 
                         path="/candidate/dashboard" 
                         element={

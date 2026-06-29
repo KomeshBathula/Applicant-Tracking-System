@@ -86,7 +86,7 @@ const Register = () => {
                 {successMessage && (
                     <div className="alert alert-success" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         <span>{successMessage}</span>
-                        <Link to="/login" className="btn btn-primary" style={{ textAlign: 'center', textDecoration: 'none' }}>
+                        <Link to="/candidate/login" className="btn btn-primary" style={{ textAlign: 'center', textDecoration: 'none' }}>
                             Go to Sign In
                         </Link>
                     </div>
@@ -155,7 +155,7 @@ const Register = () => {
                 )}
 
                 <p className="auth-footer" style={{ marginTop: successMessage ? '1rem' : '1.5rem' }}>
-                    Already have an account? <Link to="/login">Sign In</Link>
+                    Already have an account? <Link to="/candidate/login">Sign In</Link>
                 </p>
             </div>
         </div>

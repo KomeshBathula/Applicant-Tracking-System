@@ -42,8 +42,8 @@ api.interceptors.response.use(
                     window.location.href = '/recruiter/login?expired=true';
                 }
             } else {
-                if (!currentPath.includes('/login')) {
-                    window.location.href = '/login?expired=true';
+                if (!currentPath.includes('/candidate/login')) {
+                    window.location.href = '/candidate/login?expired=true';
                 }
             }
         }
