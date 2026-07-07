@@ -19,6 +19,7 @@ public class UserMapper {
                 .enabled(user.isEnabled())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
+                .resumeUrl(user.getResumeUrl())
                 .build();
     }
 }

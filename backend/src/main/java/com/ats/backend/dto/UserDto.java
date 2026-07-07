@@ -19,4 +19,5 @@ public class UserDto {
     private boolean enabled;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String resumeUrl;
 }

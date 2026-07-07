@@ -7,7 +7,7 @@ import JobList from '../../components/JobList';
 import Pagination from '../../components/Pagination';
 
 const Dashboard = () => {
-    const { user, logout } = useContext(AuthContext);
+    const { user, setUser, logout } = useContext(AuthContext);
     const [activeTab, setActiveTab] = useState('dashboard');
     const [jobs, setJobs] = useState([]);
     const [totalPages, setTotalPages] = useState(0);
@@ -17,6 +17,53 @@ const Dashboard = () => {
     const [totalOpenJobs, setTotalOpenJobs] = useState(0);
     const [recentlyPostedJobs, setRecentlyPostedJobs] = useState([]);
     const [selectedJob, setSelectedJob] = useState(null);
+    const [uploadingResume, setUploadingResume] = useState(false);
+    const [resumeMessage, setResumeMessage] = useState({ type: '', text: '' });
+
+    const handleResumeUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            setResumeMessage({ type: 'error', text: 'File is too large. Maximum size allowed is 5MB.' });
+            return;
+        }
+
+        const extension = file.name.split('.').pop().toLowerCase();
+        if (!['pdf', 'doc', 'docx'].includes(extension)) {
+            setResumeMessage({ type: 'error', text: 'Invalid file format. Only PDF, DOC, or DOCX are allowed.' });
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        setUploadingResume(true);
+        setResumeMessage({ type: '', text: '' });
+
+        try {
+            const res = await api.post('/candidate/resume', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            if (res.data && res.data.success) {
+                setUser(res.data.data);
+                setResumeMessage({ type: 'success', text: 'Resume uploaded successfully!' });
+            } else {
+                setResumeMessage({ type: 'error', text: res.data.message || 'Failed to upload resume.' });
+            }
+        } catch (err) {
+            console.error('Error uploading resume:', err);
+            setResumeMessage({
+                type: 'error',
+                text: err.response?.data?.message || 'Failed to upload resume. Please try again.'
+            });
+        } finally {
+            setUploadingResume(false);
+        }
+    };
 
     const fetchJobs = async (searchParams = {}, pageNum = 0) => {
         setLoadingJobs(true);
@@ -254,10 +301,54 @@ const Dashboard = () => {
                                     <strong style={{ color: 'var(--text-primary)' }}>{user ? new Date(user.createdAt).toLocaleDateString() : ''}</strong>
                                 </div>
                                 <div>
-                                    <label style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textTransform: 'uppercase', display: 'block' }}>Resume Attachment</label>
-                                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '0.5rem' }}>
-                                        <button className="btn btn-secondary btn-sm" onClick={() => alert('Resume upload functionality will be completed in Phase 3')}>📎 Upload New Resume</button>
-                                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>PDF, DOCX formats up to 5MB</span>
+                                    <label style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Resume Attachment</label>
+                                    
+                                    {user?.resumeUrl ? (
+                                        <div style={{ marginBottom: '1rem', padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                                                📄 Current Resume: 
+                                                <a 
+                                                    href={`${api.defaults.baseURL.replace('/api', '')}${user.resumeUrl}`} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    style={{ marginLeft: '0.5rem', color: 'var(--primary-color)', textDecoration: 'underline', fontWeight: '500' }}
+                                                >
+                                                    View / Download
+                                                </a>
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div style={{ marginBottom: '1rem', padding: '0.75rem', border: '1px dashed var(--border-color)', borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                            No resume uploaded yet.
+                                        </div>
+                                    )}
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                            <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', margin: 0, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                📎 {uploadingResume ? 'Uploading...' : 'Upload New Resume'}
+                                                <input 
+                                                    type="file" 
+                                                    accept=".pdf,.doc,.docx" 
+                                                    onChange={handleResumeUpload} 
+                                                    style={{ display: 'none' }}
+                                                    disabled={uploadingResume}
+                                                />
+                                            </label>
+                                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>PDF, DOC, DOCX up to 5MB</span>
+                                        </div>
+
+                                        {resumeMessage.text && (
+                                            <div style={{ 
+                                                fontSize: '0.85rem', 
+                                                color: resumeMessage.type === 'success' ? 'var(--success-color)' : 'var(--danger-color)',
+                                                marginTop: '0.25rem',
+                                                fontWeight: '500'
+                                            }}>
+                                                {resumeMessage.type === 'success' ? '✓ ' : '⚠ '}
+                                                {resumeMessage.text}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
