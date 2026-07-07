@@ -33,6 +33,7 @@ const Dashboard = () => {
     const [loadingCandidates, setLoadingCandidates] = useState(false);
     const [candidateTotalPages, setCandidateTotalPages] = useState(0);
     const [candidateCurrentPage, setCandidateCurrentPage] = useState(0);
+    const [candidateError, setCandidateError] = useState(null);
 
     const fetchStats = async () => {
         setLoadingStats(true);
@@ -80,6 +81,7 @@ const Dashboard = () => {
 
     const fetchCandidates = async (pageNum = 0) => {
         setLoadingCandidates(true);
+        setCandidateError(null);
         try {
             const res = await api.get('/recruiter/candidates', {
                 params: {
@@ -94,6 +96,7 @@ const Dashboard = () => {
             }
         } catch (err) {
             console.error('Error fetching candidates:', err);
+            setCandidateError(err.response?.data?.message || 'Failed to fetch candidate directory. Please try again.');
         } finally {
             setLoadingCandidates(false);
         }
@@ -380,6 +383,11 @@ const Dashboard = () => {
                                 <div className="loading-indicator">
                                     <div className="spinner"></div>
                                     <span>Loading candidate profiles...</span>
+                                </div>
+                            ) : candidateError ? (
+                                <div style={{ padding: '2rem', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--danger-color)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                                    <span>⚠ {candidateError}</span>
+                                    <button className="btn btn-secondary btn-sm" onClick={() => fetchCandidates(0)}>Retry</button>
                                 </div>
                             ) : candidates.length === 0 ? (
                                 <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '2.5rem', textAlign: 'center', color: 'var(--text-secondary)' }}>

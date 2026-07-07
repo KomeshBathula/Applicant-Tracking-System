@@ -29,10 +29,16 @@ public class CandidateController {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final String uploadDir;
 
-    public CandidateController(UserRepository userRepository, UserMapper userMapper) {
+    public CandidateController(
+            UserRepository userRepository, 
+            UserMapper userMapper,
+            @org.springframework.beans.factory.annotation.Value("${ats.upload.dir}") String uploadDir
+    ) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
+        this.uploadDir = uploadDir;
     }
 
     @GetMapping("/dashboard")
@@ -73,7 +79,7 @@ public class CandidateController {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + email));
 
         try {
-            Path uploadPath = Paths.get("./uploads/resumes");
+            Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }

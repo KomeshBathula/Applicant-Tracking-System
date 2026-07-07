@@ -28,9 +28,14 @@ import java.nio.file.Paths;
 public class FileController {
 
     private final UserRepository userRepository;
+    private final String uploadDir;
 
-    public FileController(UserRepository userRepository) {
+    public FileController(
+            UserRepository userRepository,
+            @org.springframework.beans.factory.annotation.Value("${ats.upload.dir}") String uploadDir
+    ) {
         this.userRepository = userRepository;
+        this.uploadDir = uploadDir;
     }
 
     @GetMapping("/resumes/{filename}")
@@ -41,8 +46,9 @@ public class FileController {
     ) {
         try {
             // Clean/normalize path to prevent Directory Traversal attacks
-            Path filePath = Paths.get("./uploads/resumes").resolve(filename).normalize();
-            if (!filePath.startsWith(Paths.get("./uploads/resumes").normalize())) {
+            Path baseDir = Paths.get(uploadDir).toAbsolutePath().normalize();
+            Path filePath = baseDir.resolve(filename).normalize();
+            if (!filePath.startsWith(baseDir)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
 

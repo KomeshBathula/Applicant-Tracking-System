@@ -26,12 +26,14 @@ const Dashboard = () => {
 
         if (file.size > 5 * 1024 * 1024) {
             setResumeMessage({ type: 'error', text: 'File is too large. Maximum size allowed is 5MB.' });
+            e.target.value = '';
             return;
         }
 
         const extension = file.name.split('.').pop().toLowerCase();
         if (!['pdf', 'doc', 'docx'].includes(extension)) {
             setResumeMessage({ type: 'error', text: 'Invalid file format. Only PDF, DOC, or DOCX are allowed.' });
+            e.target.value = '';
             return;
         }
 
@@ -42,11 +44,7 @@ const Dashboard = () => {
         setResumeMessage({ type: '', text: '' });
 
         try {
-            const res = await api.post('/candidate/resume', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
+            const res = await api.post('/candidate/resume', formData);
 
             if (res.data && res.data.success) {
                 setUser(res.data.data);
@@ -62,6 +60,7 @@ const Dashboard = () => {
             });
         } finally {
             setUploadingResume(false);
+            e.target.value = '';
         }
     };
 

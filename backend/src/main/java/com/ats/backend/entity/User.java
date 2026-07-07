@@ -45,6 +45,6 @@ public class User {
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
-    @Column(name = "resume_url")
+    @Column(name = "resume_url", length = 1000)
     private String resumeUrl;
 }
