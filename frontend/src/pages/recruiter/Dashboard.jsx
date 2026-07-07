@@ -28,6 +28,13 @@ const Dashboard = () => {
     const [isCreating, setIsCreating] = useState(false);
     const [editingJob, setEditingJob] = useState(null);
 
+    // Candidates state
+    const [candidates, setCandidates] = useState([]);
+    const [loadingCandidates, setLoadingCandidates] = useState(false);
+    const [candidateTotalPages, setCandidateTotalPages] = useState(0);
+    const [candidateCurrentPage, setCandidateCurrentPage] = useState(0);
+    const [candidateError, setCandidateError] = useState(null);
+
     const fetchStats = async () => {
         setLoadingStats(true);
         try {
@@ -72,11 +79,50 @@ const Dashboard = () => {
         }
     };
 
+    const fetchCandidates = async (pageNum = 0) => {
+        setLoadingCandidates(true);
+        setCandidateError(null);
+        try {
+            const res = await api.get('/recruiter/candidates', {
+                params: {
+                    page: pageNum,
+                    size: 10
+                }
+            });
+            if (res.data && res.data.success) {
+                setCandidates(res.data.data.content);
+                setCandidateTotalPages(res.data.data.totalPages);
+                setCandidateCurrentPage(res.data.data.number);
+            }
+        } catch (err) {
+            console.error('Error fetching candidates:', err);
+            setCandidateError(err.response?.data?.message || 'Failed to fetch candidate directory. Please try again.');
+        } finally {
+            setLoadingCandidates(false);
+        }
+    };
+
+    const handleViewResume = async (resumeUrl) => {
+        try {
+            const response = await api.get(resumeUrl, {
+                responseType: 'blob'
+            });
+            const blob = new Blob([response.data], { type: response.headers['content-type'] });
+            const url = window.URL.createObjectURL(blob);
+            window.open(url, '_blank');
+        } catch (error) {
+            console.error('Error viewing resume:', error);
+            alert('Failed to load resume. You may not have permission to view this file.');
+        }
+    };
+
     useEffect(() => {
         if (activeTab === 'dashboard') {
             fetchStats();
         } else if (activeTab === 'jobs') {
             fetchJobs({}, 0);
+        } else if (activeTab === 'candidates') {
+            fetchCandidates(0);
         }
     }, [activeTab]);
 
@@ -332,9 +378,74 @@ const Dashboard = () => {
                         <div className="dashboard-card">
                             <h3>Candidate Database</h3>
                             <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>Global view of registered candidates and their attached profiles.</p>
-                            <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '2.5rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                Candidate directory is empty.
-                            </div>
+                            
+                            {loadingCandidates ? (
+                                <div className="loading-indicator">
+                                    <div className="spinner"></div>
+                                    <span>Loading candidate profiles...</span>
+                                </div>
+                            ) : candidateError ? (
+                                <div style={{ padding: '2rem', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--danger-color)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                                    <span>⚠ {candidateError}</span>
+                                    <button className="btn btn-secondary btn-sm" onClick={() => fetchCandidates(0)}>Retry</button>
+                                </div>
+                            ) : candidates.length === 0 ? (
+                                <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '2.5rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                    Candidate directory is empty.
+                                </div>
+                            ) : (
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', textAlign: 'left' }}>
+                                        <thead>
+                                            <tr style={{ borderBottom: '2px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                                                <th style={{ padding: '0.75rem' }}>Name</th>
+                                                <th style={{ padding: '0.75rem' }}>Email</th>
+                                                <th style={{ padding: '0.75rem' }}>Joined Date</th>
+                                                <th style={{ padding: '0.75rem' }}>Resume Status</th>
+                                                <th style={{ padding: '0.75rem' }}>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {candidates.map(candidate => (
+                                                <tr key={candidate.id} style={{ borderBottom: '1px solid var(--border-color)', fontSize: '0.9rem' }}>
+                                                    <td style={{ padding: '0.75rem', fontWeight: '500', color: 'var(--text-primary)' }}>{candidate.fullName}</td>
+                                                    <td style={{ padding: '0.75rem', color: 'var(--text-secondary)' }}>{candidate.email}</td>
+                                                    <td style={{ padding: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                        {new Date(candidate.createdAt).toLocaleDateString()}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem' }}>
+                                                        {candidate.resumeUrl ? (
+                                                            <span className="badge" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.2)', color: 'var(--success-color)' }}>Uploaded</span>
+                                                        ) : (
+                                                            <span className="badge" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)', color: 'var(--danger-color)' }}>Missing</span>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem' }}>
+                                                        {candidate.resumeUrl ? (
+                                                            <button 
+                                                                onClick={() => handleViewResume(candidate.resumeUrl)}
+                                                                className="btn btn-secondary btn-sm"
+                                                                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                                                            >
+                                                                📥 Download
+                                                            </button>
+                                                        ) : (
+                                                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>N/A</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    {candidateTotalPages > 1 && (
+                                        <Pagination
+                                            currentPage={candidateCurrentPage}
+                                            totalPages={candidateTotalPages}
+                                            onPageChange={(page) => fetchCandidates(page)}
+                                        />
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
 
