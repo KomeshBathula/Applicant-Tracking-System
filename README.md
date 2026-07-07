@@ -14,8 +14,8 @@ The application utilizes a classic layered architecture, ensuring separation of 
 [ Frontend: React / Vite ]
             │ (Axios API Requests with JWT)
             ▼
-[ Controller (JobController / AuthController) ]
-            │ (DTO Transfer)
+[ Controller (JobController / AuthController / FileController) ]
+            │ (DTO Transfer / Secure File Streaming)
             ▼
 [ Service Layer (JobServiceImpl / AuthServiceImpl) ]
             │ (Business & Authorization Checks)
@@ -36,6 +36,14 @@ The application utilizes a classic layered architecture, ensuring separation of 
 * **Backend Searching & Pagination**: Searching, sorting, and pagination are handled efficiently at the database level. The `JobRepository` uses JPQL to execute queries based on user parameters, returning a paginated `Page<JobDto>` model.
 * **Candidate Scope Limit**: For security, when a user with a `ROLE_CANDIDATE` calls the GET `/api/jobs` endpoint, the controller overrides the query filter status to `OPEN` to prevent them from viewing closed jobs.
 * **Lombok & Bean Validation**: The DTO payloads utilize standard annotations (`@NotBlank`, `@NotNull`, etc.) to enforce schema validity before reaching the service layer.
+
+### 3. Secured Resume Upload & Authenticated Serving Flow
+* **Double-Validation (Anti-Spoofing)**: `CandidateController` validates both the file extension and the MIME type (`application/pdf`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, `application/msword`) before saving to prevent malicious file uploads.
+* **Disk Resource Cleanup**: When a candidate uploads a new resume, any previous resume file is automatically removed from the local disk to prevent resource leaks and unbounded storage growth.
+* **Configurable Storage**: The upload path is externalized via `ats.upload.dir` in `application.properties` to ensure reliable resolution across production, staging, and docker container environments.
+* **PII Data Security**: Directory listing is hidden, and files are not served statically. Resumes are served through an authenticated controller (`FileController`) which enforces that only the candidate who uploaded the file, a recruiter, or an administrator can access the URL.
+* **Axios Blob Streaming**: Since the download endpoint is secured under JWT, the React application downloads the file as a binary `Blob` using Axios (which includes authorization headers) and previews/downloads it locally using a secure browser Blob URL.
+* **Paginated Candidates**: The recruiter's candidate database features server-side pagination with loading, error, and retry states for optimal scalability.
 
 ---
 
