@@ -208,18 +208,7 @@ const Dashboard = () => {
                 </svg>
             )
         },
-        { 
-            id: 'applications', 
-            label: 'Applications', 
-            icon: (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                </svg>
-            )
-        },
+
         { 
             id: 'candidates', 
             label: 'Candidates', 
@@ -394,24 +383,7 @@ const Dashboard = () => {
                 </div>
             )}
 
-            {activeTab === 'applications' && (
-                <div className="card">
-                    <div className="card-header">
-                        <h3 className="card-title">Applications Pipeline</h3>
-                    </div>
-                    <div className="card-body">
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>View, update statuses, and move candidates through the hiring workflow.</p>
-                        <div style={{ border: '1px dashed var(--border-color)', borderRadius: '8px', padding: '3.5rem 2rem', textAlign: 'center', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-secondary)' }}>
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                            </svg>
-                            <p style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-primary)' }}>Pipeline Empty</p>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>No candidates have applied to your active postings yet.</p>
-                        </div>
-                    </div>
-                </div>
-            )}
+
 
             {activeTab === 'candidates' && (
                 <div className="card">
@@ -429,7 +401,7 @@ const Dashboard = () => {
                     ) : candidateError ? (
                         <div className="card-body" style={{ padding: '2rem', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--danger-color)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
                             <span>⚠ {candidateError}</span>
-                            <button className="btn btn-secondary btn-sm" onClick={() => fetchCandidates(0)}>Retry</button>
+                            <button className="btn btn-secondary btn-sm" onClick={() => fetchCandidates(candidateCurrentPage)}>Retry</button>
                         </div>
                     ) : candidates.length === 0 ? (
                         <div className="card-body" style={{ border: '1px dashed var(--border-color)', borderRadius: '8px', padding: '2.5rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
@@ -527,36 +499,105 @@ const Dashboard = () => {
 
             {/* View Details Modal Overlay */}
             {selectedJob && (
-                <div className="modal-backdrop">
-                    <div className="modal-content" style={{ borderTop: '4px solid var(--success-color)' }}>
-                        <div className="card-header" style={{ padding: '1.25rem 1.5rem' }}>
-                            <h3 className="card-title">{selectedJob.title}</h3>
-                            <button className="btn btn-ghost btn-sm" style={{ padding: 0, width: '28px', height: '28px' }} onClick={() => setSelectedJob(null)}>✕</button>
-                        </div>
-                        <div className="card-body" style={{ padding: '1.5rem', overflowY: 'auto' }}>
-                            <p style={{ fontWeight: '600', fontSize: '0.95rem', color: 'var(--text-primary)' }}>{selectedJob.company} — {selectedJob.location}</p>
-                            
-                            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', margin: '1rem 0' }}>
-                                <span className="badge badge-success">{selectedJob.employmentType}</span>
-                                <span className="badge badge-success">{selectedJob.experienceRequired} Experience</span>
-                                <span className="badge badge-success">{selectedJob.salaryRange}</span>
-                                <span className={`badge ${selectedJob.status === 'OPEN' ? 'badge-success' : 'badge-danger'}`}>
-                                    Status: {selectedJob.status}
-                                </span>
-                            </div>
-
-                            <div style={{ margin: '1.5rem 0', lineHeight: '1.6', fontSize: '0.9rem' }}>
-                                <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Job Description:</strong>
-                                <p style={{ whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>{selectedJob.description}</p>
-                            </div>
-                        </div>
-                        <div className="card-footer" style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-                            <button className="btn btn-secondary btn-sm" onClick={() => setSelectedJob(null)}>Close</button>
-                        </div>
-                    </div>
-                </div>
+                <ViewJobDetailsModal job={selectedJob} onClose={() => setSelectedJob(null)} />
             )}
         </AppLayout>
+    );
+};
+
+const ViewJobDetailsModal = ({ job, onClose }) => {
+    const dialogRef = React.useRef(null);
+    const closeButtonRef = React.useRef(null);
+
+    React.useEffect(() => {
+        if (closeButtonRef.current) {
+            closeButtonRef.current.focus();
+        }
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+
+        const handleKeyDownTrap = (e) => {
+            if (e.key === 'Tab') {
+                if (!dialogRef.current) return;
+                const focusableElements = dialogRef.current.querySelectorAll(
+                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                );
+                if (focusableElements.length === 0) return;
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+
+                if (e.shiftKey) {
+                    if (document.activeElement === firstElement) {
+                        lastElement.focus();
+                        e.preventDefault();
+                    }
+                } else {
+                    if (document.activeElement === lastElement) {
+                        firstElement.focus();
+                        e.preventDefault();
+                    }
+                }
+            }
+        };
+        
+        const modalContainer = dialogRef.current;
+        modalContainer?.addEventListener('keydown', handleKeyDownTrap);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            modalContainer?.removeEventListener('keydown', handleKeyDownTrap);
+        };
+    }, [onClose]);
+
+    return (
+        <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+            <div 
+                ref={dialogRef}
+                className="modal-content" 
+                role="dialog" 
+                aria-modal="true" 
+                aria-labelledby="modal-title"
+                style={{ borderTop: '4px solid var(--success-color)' }}
+            >
+                <div className="card-header" style={{ padding: '1.25rem 1.5rem' }}>
+                    <h3 id="modal-title" className="card-title">{job.title}</h3>
+                    <button 
+                        ref={closeButtonRef}
+                        className="btn btn-ghost btn-sm" 
+                        style={{ padding: 0, width: '28px', height: '28px' }} 
+                        onClick={onClose}
+                        aria-label="Close details"
+                    >
+                        ✕
+                    </button>
+                </div>
+                <div className="card-body" style={{ padding: '1.5rem', overflowY: 'auto' }}>
+                    <p style={{ fontWeight: '600', fontSize: '0.95rem', color: 'var(--text-primary)' }}>{job.company} — {job.location}</p>
+                    
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', margin: '1rem 0' }}>
+                        <span className="badge badge-success">{job.employmentType}</span>
+                        <span className="badge badge-success">{job.experienceRequired} Experience</span>
+                        <span className="badge badge-success">{job.salaryRange}</span>
+                        <span className={`badge ${job.status === 'OPEN' ? 'badge-success' : 'badge-danger'}`}>
+                            Status: {job.status}
+                        </span>
+                    </div>
+
+                    <div style={{ margin: '1.5rem 0', lineHeight: '1.6', fontSize: '0.9rem' }}>
+                        <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.5rem' }}>Job Description:</strong>
+                        <p style={{ whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>{job.description}</p>
+                    </div>
+                </div>
+                <div className="card-footer" style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
+                    <button className="btn btn-secondary btn-sm" onClick={onClose} aria-label="Close dialog">Close</button>
+                </div>
+            </div>
+        </div>
     );
 };
 

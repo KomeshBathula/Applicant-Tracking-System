@@ -65,7 +65,7 @@ const AppLayout = ({ children, activeTab, setActiveTab, navigationItems, roleTit
                 <div className="sidebar-footer">
                     <div className="sidebar-profile">
                         <div className="avatar">
-                            {user?.fullName?.charAt(0).toUpperCase() || 'U'}
+                            {(user?.fullName?.charAt(0) || 'U').toUpperCase()}
                         </div>
                         {!collapsed && (
                             <div className="sidebar-profile-info">
@@ -92,7 +92,11 @@ const AppLayout = ({ children, activeTab, setActiveTab, navigationItems, roleTit
                     </div>
                     <div className="topbar-right">
                         <ThemeToggle />
-                        <span className="badge" style={{ backgroundColor: roleColor + '1a', color: roleColor, border: `1px solid ${roleColor}25` }}>
+                        <span className="badge" style={{ 
+                            backgroundColor: roleColor?.startsWith('var(') ? roleColor.replace('color)', 'light)') : (roleColor ? roleColor + '1a' : undefined), 
+                            color: roleColor, 
+                            border: roleColor ? `1px solid color-mix(in srgb, ${roleColor} 20%, transparent)` : undefined 
+                        }}>
                             {roleTitle}
                         </span>
                     </div>

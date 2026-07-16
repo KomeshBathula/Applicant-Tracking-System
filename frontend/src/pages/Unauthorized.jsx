@@ -5,7 +5,7 @@ const Unauthorized = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        document.title = "403 Unauthorized - ATS";
+        document.title = "403 Forbidden - ATS";
     }, []);
 
     return (
