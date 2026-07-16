@@ -8,6 +8,7 @@ const Landing = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
+        document.title = "ATS Portal - Find & Apply to Jobs";
         if (user) {
             const roleClean = user.role.replace('ROLE_', '');
             if (roleClean === 'ADMIN') navigate('/admin/dashboard');
@@ -35,7 +36,7 @@ const Landing = () => {
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '3rem 2rem' }}>
                 <div style={{ textAlign: 'center', marginBottom: '3.5rem', maxWidth: '640px' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 1rem', borderRadius: '9999px', backgroundColor: 'var(--primary-light)', color: 'var(--primary-color)', fontSize: '0.75rem', fontWeight: 600, marginBottom: '1.5rem', border: '1px solid var(--border-color)' }}>
-                        <span>✨ Recruitment Portal</span>
+                        <span>Recruitment Portal</span>
                     </div>
                     <h1 style={{ fontSize: '2.5rem', fontWeight: '800', color: 'var(--text-primary)', lineHeight: 1.25, letterSpacing: '-0.03em' }}>
                         The Modern Hiring Infrastructure

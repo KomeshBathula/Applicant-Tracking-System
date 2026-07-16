@@ -16,6 +16,7 @@ const Register = () => {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
+        document.title = "Candidate Registration - ATS";
         if (user) {
             navigate('/candidate/dashboard');
         }

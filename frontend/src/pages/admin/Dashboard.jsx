@@ -1,10 +1,14 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import AppLayout from '../../components/AppLayout';
 
 const Dashboard = () => {
     const { user, logout } = useContext(AuthContext);
     const [activeTab, setActiveTab] = useState('dashboard');
+
+    useEffect(() => {
+        document.title = "Admin Control Center - ATS";
+    }, []);
 
     const navigationItems = [
         { 

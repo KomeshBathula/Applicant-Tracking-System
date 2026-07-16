@@ -117,6 +117,7 @@ const Dashboard = () => {
     };
 
     useEffect(() => {
+        document.title = "Recruiter Dashboard - ATS";
         if (activeTab === 'dashboard') {
             fetchStats();
         } else if (activeTab === 'jobs') {
@@ -536,9 +537,9 @@ const Dashboard = () => {
                             <p style={{ fontWeight: '600', fontSize: '0.95rem', color: 'var(--text-primary)' }}>{selectedJob.company} — {selectedJob.location}</p>
                             
                             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', margin: '1rem 0' }}>
-                                <span className="badge badge-success">💼 {selectedJob.employmentType}</span>
-                                <span className="badge badge-success">🎓 {selectedJob.experienceRequired} Experience</span>
-                                <span className="badge badge-success">💰 {selectedJob.salaryRange}</span>
+                                <span className="badge badge-success">{selectedJob.employmentType}</span>
+                                <span className="badge badge-success">{selectedJob.experienceRequired} Experience</span>
+                                <span className="badge badge-success">{selectedJob.salaryRange}</span>
                                 <span className={`badge ${selectedJob.status === 'OPEN' ? 'badge-success' : 'badge-danger'}`}>
                                     Status: {selectedJob.status}
                                 </span>

@@ -16,6 +16,7 @@ const Register = () => {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
+        document.title = "Recruiter Registration - ATS";
         if (user) {
             navigate('/recruiter/dashboard');
         }
@@ -75,7 +76,7 @@ const Register = () => {
     return (
         <div className="auth-split-container">
             {/* Split Sidebar panel */}
-            <div className="auth-split-sidebar" style={{ background: 'radial-gradient(circle at top left, var(--bg-secondary), rgba(16, 185, 129, 0.05))' }}>
+            <div className="auth-split-sidebar" style={{ backgroundColor: 'var(--bg-secondary)' }}>
                 <div style={{ maxWidth: '400px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontWeight: 700, fontSize: '1.25rem', marginBottom: '4rem' }}>
                         <div className="sidebar-brand-icon" style={{ width: '32px', height: '32px', fontSize: '0.9rem', backgroundColor: 'var(--success-color)' }}>▲</div>

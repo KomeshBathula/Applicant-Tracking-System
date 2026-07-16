@@ -16,6 +16,7 @@ const Login = () => {
     const [sessionExpired, setSessionExpired] = useState(false);
 
     useEffect(() => {
+        document.title = "Candidate Sign In - ATS";
         if (user) {
             const roleClean = user.role.replace('ROLE_', '');
             if (roleClean === 'CANDIDATE') {

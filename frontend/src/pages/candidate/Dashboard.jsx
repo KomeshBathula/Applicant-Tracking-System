@@ -132,6 +132,7 @@ const Dashboard = () => {
 
     // Load initial counts and recent jobs
     useEffect(() => {
+        document.title = "Candidate Dashboard - ATS";
         fetchRecentlyPosted();
         fetchJobs({}, 0);
     }, []);
@@ -250,10 +251,10 @@ const Dashboard = () => {
                                 </div>
                                 <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                     <button className="btn btn-secondary btn-sm btn-block" style={{ justifyContent: 'flex-start' }} onClick={() => setActiveTab('profile')}>
-                                        📎 Upload Resume
+                                        Upload Resume
                                     </button>
                                     <button className="btn btn-secondary btn-sm btn-block" style={{ justifyContent: 'flex-start' }} onClick={() => setActiveTab('applications')}>
-                                        💼 Check Application Status
+                                        Check Application Status
                                     </button>
                                 </div>
                             </div>
@@ -409,9 +410,9 @@ const Dashboard = () => {
                             <p style={{ fontWeight: '600', fontSize: '0.95rem', color: 'var(--text-primary)' }}>{selectedJob.company} — {selectedJob.location}</p>
                             
                             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', margin: '1rem 0' }}>
-                                <span className="badge badge-info">💼 {selectedJob.employmentType}</span>
-                                <span className="badge badge-info">🎓 {selectedJob.experienceRequired} Experience</span>
-                                <span className="badge badge-info">💰 {selectedJob.salaryRange}</span>
+                                <span className="badge badge-info">{selectedJob.employmentType}</span>
+                                <span className="badge badge-info">{selectedJob.experienceRequired} Experience</span>
+                                <span className="badge badge-info">{selectedJob.salaryRange}</span>
                             </div>
 
                             <div style={{ margin: '1.5rem 0', lineHeight: '1.6', fontSize: '0.9rem' }}>
