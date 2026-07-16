@@ -13,7 +13,7 @@ const AppLayout = ({ children, activeTab, setActiveTab, navigationItems, roleTit
                 <div className="sidebar-header">
                     <div className="sidebar-brand">
                         <div className="sidebar-brand-icon">▲</div>
-                        {!collapsed && <span>ATS Enterprise</span>}
+                        {!collapsed && <span>ATS Portal</span>}
                     </div>
                     <button 
                         className="btn btn-ghost btn-sm" 

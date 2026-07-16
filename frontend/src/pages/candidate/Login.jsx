@@ -74,7 +74,7 @@ const Login = () => {
                 <div style={{ maxWidth: '400px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontWeight: 700, fontSize: '1.25rem', marginBottom: '4rem' }}>
                         <div className="sidebar-brand-icon" style={{ width: '32px', height: '32px', fontSize: '0.9rem' }}>▲</div>
-                        <span style={{ color: 'var(--text-primary)' }}>ATS Enterprise</span>
+                        <span style={{ color: 'var(--text-primary)' }}>ATS Portal</span>
                     </div>
                     
                     <h2 style={{ fontSize: '2rem', fontWeight: 700, lineHeight: 1.25, letterSpacing: '-0.02em', color: 'var(--text-primary)', marginBottom: '1.5rem' }}>
