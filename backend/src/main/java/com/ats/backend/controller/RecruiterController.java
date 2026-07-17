@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,6 +21,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/recruiter")
+@PreAuthorize("hasAnyRole('ROLE_RECRUITER', 'ROLE_ADMIN')")
 @Tag(name = "Recruiter Controller", description = "Endpoints restricted to RECRUITER or ADMIN roles")
 @SecurityRequirement(name = "bearerAuth")
 public class RecruiterController {

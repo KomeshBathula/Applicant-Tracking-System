@@ -61,10 +61,15 @@ public class ApplicationNoteServiceImpl implements ApplicationNoteService {
             throw new InvalidRequestException("You are not authorized to add notes to this application.");
         }
 
+        String content = request.getContent() != null ? request.getContent().trim() : "";
+        if (content.isEmpty()) {
+            throw new InvalidRequestException("Note content cannot be empty.");
+        }
+
         ApplicationNote note = ApplicationNote.builder()
                 .application(application)
                 .author(author)
-                .content(request.getContent())
+                .content(content)
                 .build();
 
         ApplicationNote savedNote = noteRepository.save(note);
@@ -114,7 +119,12 @@ public class ApplicationNoteServiceImpl implements ApplicationNoteService {
             throw new InvalidRequestException("You are not authorized to update this note.");
         }
 
-        note.setContent(request.getContent());
+        String content = request.getContent() != null ? request.getContent().trim() : "";
+        if (content.isEmpty()) {
+            throw new InvalidRequestException("Note content cannot be empty.");
+        }
+
+        note.setContent(content);
         ApplicationNote savedNote = noteRepository.save(note);
         return noteMapper.toDto(savedNote);
     }
