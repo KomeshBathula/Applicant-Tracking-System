@@ -706,12 +706,12 @@ const ViewJobDetailsModal = ({ job, onClose }) => {
         setEditingInterview(item);
         setSchedRound(item.interviewRound);
         setSchedMode(item.interviewMode);
-        if (item.scheduledAt) {
-            setSchedScheduledAt(item.scheduledAt.substring(0, 16));
+        if (item.scheduledDateTime) {
+            setSchedScheduledAt(item.scheduledDateTime.substring(0, 16));
         } else {
             setSchedScheduledAt('');
         }
-        setSchedDuration(item.durationMinutes);
+        setSchedDuration(item.duration);
         setSchedInterviewerId(item.interviewerId || '');
         setSchedMeetingLink(item.meetingLink || '');
         setSchedLocation(item.location || '');
@@ -737,16 +737,21 @@ const ViewJobDetailsModal = ({ job, onClose }) => {
         }
 
         const payload = {
-            applicationId: selectedApp.id,
             interviewRound: schedRound,
             interviewMode: schedMode,
-            scheduledAt: formattedScheduledAt,
-            durationMinutes: parseInt(schedDuration),
+            scheduledDateTime: formattedScheduledAt,
+            duration: parseInt(schedDuration),
             interviewerId: parseInt(schedInterviewerId),
             meetingLink: schedMode === 'ONLINE' ? schedMeetingLink : null,
             location: schedMode !== 'ONLINE' ? schedLocation : null,
             notes: schedNotes
         };
+
+        if (editingInterview) {
+            payload.status = editingInterview.status;
+        } else {
+            payload.applicationId = selectedApp.id;
+        }
 
         try {
             let res;
@@ -1590,10 +1595,10 @@ const ViewJobDetailsModal = ({ job, onClose }) => {
                                                                 </span>
                                                             </div>
                                                             <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                                                                Interviewer: {item.interviewerName} ({item.interviewerEmail})
+                                                                Interviewer: {item.interviewerFullName} ({item.interviewerEmail})
                                                             </p>
                                                             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
-                                                                📅 {new Date(item.scheduledAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })} ({item.durationMinutes} mins)
+                                                                📅 {new Date(item.scheduledDateTime).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })} ({item.duration} mins)
                                                             </p>
                                                             {item.interviewMode === 'ONLINE' && item.meetingLink && (
                                                                 <p style={{ fontSize: '0.8rem', marginTop: '0.15rem' }}>
