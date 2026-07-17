@@ -87,11 +87,24 @@ public class EmailServiceImpl implements EmailService {
         sendEmail(candidateEmail, recruiterName + " via ATS", recruiterEmail, subject, body);
     }
 
+    private String escapeHtml(String text) {
+        if (text == null) {
+            return null;
+        }
+        return text.replace("&", "&amp;")
+                   .replace("<", "&lt;")
+                   .replace(">", "&gt;")
+                   .replace("\"", "&quot;")
+                   .replace("'", "&#x27;")
+                   .replace("/", "&#x2F;");
+    }
+
     @Override
     @Async
     public void sendApplicationStatusUpdatedEmail(String candidateEmail, String candidateName, String jobTitle, String newStatus, String note, String recruiterEmail, String recruiterName) {
-        String noteSection = (note != null && !note.trim().isEmpty()) 
-            ? String.format("<div style='background-color: #f7f6f3; padding: 15px; border-left: 4px solid #0f6e5e; margin: 15px 0; border-radius: 0 6px 6px 0;'><strong>Recruiter's Note:</strong><br/>%s</div>", note) 
+        String escapedNote = escapeHtml(note);
+        String noteSection = (escapedNote != null && !escapedNote.trim().isEmpty()) 
+            ? String.format("<div style='background-color: #f7f6f3; padding: 15px; border-left: 4px solid #0f6e5e; margin: 15px 0; border-radius: 0 6px 6px 0;'><strong>Recruiter's Note:</strong><br/>%s</div>", escapedNote) 
             : "";
 
         String statusText = newStatus.replace('_', ' ');
@@ -207,6 +220,33 @@ public class EmailServiceImpl implements EmailService {
             "</body>" +
             "</html>",
             candidateName, jobTitle, recruiterName, recruiterEmail
+        );
+        sendEmail(candidateEmail, recruiterName + " via ATS", recruiterEmail, subject, body);
+    }
+
+    @Override
+    @Async
+    public void sendApplicationWithdrawnByAdminEmail(String candidateEmail, String candidateName, String jobTitle, String recruiterEmail, String recruiterName, String adminName) {
+        String subject = "Application Withdrawn by Administrator: " + jobTitle;
+        String body = String.format(
+            "<html>" +
+            "<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e4e1da; border-radius: 8px;'>" +
+            "  <div style='background-color: #c55b4e; color: white; padding: 15px 20px; border-radius: 6px 6px 0 0; text-align: center;'>" +
+            "    <h2 style='margin: 0; font-weight: 600;'>ATS Corporation</h2>" +
+            "  </div>" +
+            "  <div style='padding: 20px;'>" +
+            "    <p>Hi <strong>%s</strong>,</p>" +
+            "    <p>This email is to notify you that your application for the <strong>%s</strong> position has been withdrawn by administrator <strong>%s</strong>.</p>" +
+            "    <p>If you have any questions or believe this was done in error, please contact recruitment support.</p>" +
+            "    <br/>" +
+            "    <p>Best regards,<br/><strong>%s</strong><br/>Recruitment at ATS Corporation</p>" +
+            "  </div>" +
+            "  <div style='border-top: 1px solid #e4e1da; padding: 15px; font-size: 0.8rem; color: #8a94a0; text-align: center;'>" +
+            "    This is an automated notification. Replies will be routed directly to %s." +
+            "  </div>" +
+            "</body>" +
+            "</html>",
+            candidateName, jobTitle, adminName, recruiterName, recruiterEmail
         );
         sendEmail(candidateEmail, recruiterName + " via ATS", recruiterEmail, subject, body);
     }

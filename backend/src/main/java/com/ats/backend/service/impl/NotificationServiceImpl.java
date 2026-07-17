@@ -56,7 +56,9 @@ public class NotificationServiceImpl implements NotificationService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userEmail));
 
-        Pageable pageable = PageRequest.of(page, size);
+        int validatedPage = Math.max(0, page);
+        int validatedSize = Math.max(1, Math.min(100, size));
+        Pageable pageable = PageRequest.of(validatedPage, validatedSize);
         Page<Notification> notifications = notificationRepository.findByRecipientIdOrderByCreatedAtDesc(user.getId(), pageable);
         return notifications.map(notificationMapper::toDto);
     }
@@ -67,7 +69,9 @@ public class NotificationServiceImpl implements NotificationService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userEmail));
 
-        Pageable pageable = PageRequest.of(page, size);
+        int validatedPage = Math.max(0, page);
+        int validatedSize = Math.max(1, Math.min(100, size));
+        Pageable pageable = PageRequest.of(validatedPage, validatedSize);
         Page<Notification> notifications = notificationRepository.findByRecipientIdAndReadStatusOrderByCreatedAtDesc(user.getId(), false, pageable);
         return notifications.map(notificationMapper::toDto);
     }

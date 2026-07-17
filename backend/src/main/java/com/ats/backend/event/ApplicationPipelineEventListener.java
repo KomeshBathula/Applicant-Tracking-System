@@ -9,7 +9,10 @@ import com.ats.backend.service.NotificationService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Component
+@Slf4j
 public class ApplicationPipelineEventListener {
 
     private final NotificationService notificationService;
@@ -22,7 +25,8 @@ public class ApplicationPipelineEventListener {
 
     @EventListener
     public void handleApplicationPipelineEvent(ApplicationPipelineEvent event) {
-        Application application = event.getApplication();
+        try {
+            Application application = event.getApplication();
         Job job = application.getJob();
         User candidate = application.getCandidate();
         User recruiter = job.getRecruiter();
@@ -71,24 +75,44 @@ public class ApplicationPipelineEventListener {
                 break;
 
             case WITHDRAWN:
+                boolean isWithdrawnByAdmin = event.getActor() != null && !event.getActor().getId().equals(candidate.getId());
+                String recruiterMessage = isWithdrawnByAdmin 
+                        ? String.format("Application for %s has been withdrawn by administrator %s.", job.getTitle(), event.getActor().getFullName())
+                        : String.format("Candidate %s has withdrawn their application for %s.", candidate.getFullName(), job.getTitle());
+
                 // Create In-App Notification for Recruiter
                 notificationService.createNotification(
                         recruiter,
                         "Application Withdrawn",
-                        String.format("Candidate %s has withdrawn their application for %s.", candidate.getFullName(), job.getTitle()),
+                        recruiterMessage,
                         NotificationType.APPLICATION_STATUS_UPDATED,
                         application.getId(),
                         "/recruiter/dashboard"
                 );
+
                 // Send Email Notification to Candidate on behalf of the Recruiter
-                emailService.sendApplicationWithdrawnEmail(
-                        candidate.getEmail(),
-                        candidate.getFullName(),
-                        job.getTitle(),
-                        recruiter.getEmail(),
-                        recruiter.getFullName()
-                );
+                if (isWithdrawnByAdmin) {
+                    emailService.sendApplicationWithdrawnByAdminEmail(
+                            candidate.getEmail(),
+                            candidate.getFullName(),
+                            job.getTitle(),
+                            recruiter.getEmail(),
+                            recruiter.getFullName(),
+                            event.getActor().getFullName()
+                    );
+                } else {
+                    emailService.sendApplicationWithdrawnEmail(
+                            candidate.getEmail(),
+                            candidate.getFullName(),
+                            job.getTitle(),
+                            recruiter.getEmail(),
+                            recruiter.getFullName()
+                    );
+                }
                 break;
+        }
+        } catch (Exception e) {
+            log.error("Failed to handle application pipeline event", e);
         }
     }
 }
