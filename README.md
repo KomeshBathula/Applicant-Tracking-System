@@ -40,6 +40,7 @@ Authentication uses standard JWT access tokens attached to request headers, supp
 |---|---|
 | Language | Java 21 / JavaScript (React 18) |
 | Backend Framework | Spring Boot 3.4.1 |
+| AI Integration | Spring AI (OpenAI & Groq Client Abstraction) |
 | Frontend Library | React 18 with Vite |
 | Security | Spring Security, JWT (jjwt 0.12.6) |
 | Persistence | Spring Data JPA, Hibernate |
@@ -60,20 +61,21 @@ The project is split into a Java Spring Boot backend utilizing standard layered 
 Application-Tracking-System/
 ├── backend/
 │   └── src/main/java/com/ats/backend/
-│       ├── config/         # Security configuration, CORS, file upload dirs
-│       ├── controller/     # REST Controllers exposing resource API endpoints
+│       ├── config/         # Security, CORS, Async, and Spring AI configuration
+│       ├── controller/     # REST Controllers (Jobs, Applications, Screening, Configs)
 │       ├── dto/            # Data Transfer Objects with Bean validation annotations
 │       ├── entity/         # JPA Entities mapping relational MySQL tables
+│       ├── event/          # Application event publishers and listeners (Async pipeline triggers)
 │       ├── exception/      # Global Exception handler mapping custom runtime errors
 │       ├── mapper/         # Converters mapping entities to DTOs
 │       ├── repository/     # JPA Data repositories with custom JPQL specifications
 │       ├── security/       # JWT Token Provider, JwtAuthenticationFilter
-│       └── service/        # Interface-backed transaction-enforced services
+│       └── service/        # Interface-backed transaction-enforced services (including AI engines)
 ├── frontend/
 │   └── src/
-│       ├── components/     # Reusable layout and modular card elements (JobCard, SearchBar)
+│       ├── components/     # Reusable layout, modal and card elements (JobCard, SearchBar, ReportModal)
 │       ├── context/        # React context wrappers for authentication and themes
-│       ├── pages/          # Candidate and Recruiter portal dashboards
+│       ├── pages/          # Candidate, Recruiter, and Admin portal dashboards
 │       ├── services/       # Interceptor-supported Axios client instance
 │       └── index.css       # Premium dynamic design styles and colors
 └── docker-compose.yml      # DB service configuration
@@ -110,16 +112,26 @@ Candidates apply to open positions. If they apply to a job they've already submi
 ### File and Resume Storage
 Candidates upload resumes which are checked against both file extensions and binary MIME-types (anti-spoofing protection) and saved to a configurable local storage folder. Old files are pruned automatically upon re-upload. Files are served through authenticated streaming controllers which restrict access to the owner candidate, assigned recruiters, or administrators.
 
+### Enterprise AI Resume Screening & Analytics
+A production-grade, multi-tenant resume screening module. Key capabilities include:
+- **Provider Abstraction**: Allows companies to dynamically select and configure their LLM provider (OpenAI or Groq) using their own API keys, fully isolated by tenant boundaries.
+- **Asynchronous Task Queue**: Uses background processing for candidate screening to prevent main-thread request blocking, exposing state-driven loading UI, real-time polling, and failed-job retries.
+- **Explainable Multi-Criteria Scoring**: Evaluates candidate resumes on four criteria (Experience, Education, Projects, and Certifications) on a 0-100 scale, with detailed strengths, weaknesses, matched skills, and missing skills.
+- **Human-in-the-Loop Recruiter Overrides**: Recruiters can override the AI recommendation, which triggers an audit trail record capturing the override author, timestamp, and mandatory override reason.
+- **Version History**: Tracks historical edits of the AI screening report, allowing users to toggle between past analysis versions.
+- **Analytics & Cost Auditing**: Centralizes screening volume statistics, match recommendation distributions, average scores, and token usage-based cost estimations (USD) per model/request.
+
 ---
 
 ## Role Model and Access Control
 
-Three roles are seeded into the database at startup.
+Four roles are seeded into the database at startup.
 
 | Role | Description |
 |---|---|
-| `ROLE_ADMIN` | Unrestricted access across the platform. Can edit any jobs or application records. |
-| `ROLE_RECRUITER` | Create job postings, update statuses of applications, and download applicant resumes. |
+| `ROLE_ADMIN` | Unrestricted access across the platform. Can edit any jobs, configurations, or application records. |
+| `ROLE_COMPANY_ADMIN` | Executive tenant manager. Has access to all recruiter workspace dashboards, job postings, candidate reports, and can configure the company's AI providers, keys, and view cost analytics. |
+| `ROLE_RECRUITER` | Create job postings, update statuses of applications, view candidate reports, override AI ratings, and download applicant resumes. |
 | `ROLE_CANDIDATE` | Search open positions, upload resumes, submit applications, and withdraw. |
 
 ---
@@ -162,21 +174,39 @@ Three roles are seeded into the database at startup.
 | POST | `/resume/upload` | Candidate | Upload resume document |
 | GET | `/resume/download/{filename}`| Authenticated | Stream resume file securely |
 
+### AI Screening & Analytics — `/api/screening`
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| POST | `/{applicationId}` | Recruiter, Admin | Trigger manual AI screening for an application |
+| POST | `/batch/job/{jobId}` | Recruiter, Admin | Trigger batch AI screening for all candidates of a job |
+| GET | `/analytics` | Recruiter, Admin | Fetch company AI usage, distributions and cost analytics |
+| POST | `/{applicationId}/override` | Recruiter, Admin | Submit manual recruiter recommendation override with audit details |
+| GET | `/{applicationId}/history` | Recruiter, Admin | Get full report revision/audit history |
+
+### Company AI Configs — `/api/company-admin`
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| GET | `/ai-config` | Company Admin | Get the company's active AI provider configuration |
+| POST | `/ai-config` | Company Admin | Create or update company AI provider settings and credentials |
+
 ---
 
 ## Database Design
 
-Structured MySQL database containing five main tables:
+Structured MySQL database containing key business modules:
 
 ```
-┌──────────────┐          ┌──────────────┐
-│    roles     │          │    users     │
-├──────────────┤1        *├──────────────┤
-│ id           │─────────>│ id           │
-│ role_name    │          │ email        │
-└──────────────┘          │ password     │
-                          │ full_name    │
-                          │ resume_url   │
+┌──────────────┐          ┌──────────────┐          ┌────────────────────┐
+│    roles     │          │    users     │          │ company_ai_configs │
+├──────────────┤1        *├──────────────┤          ├────────────────────┤
+│ id           │─────────>│ id           │          │ id                 │
+│ role_name    │          │ email        │         1│ company_id (FK)    │
+└──────────────┘          │ password     │<─────────│ ai_provider        │
+                          │ full_name    │          │ api_key            │
+                          │ resume_url   │          │ model_name         │
+                          │ company_id   │          └────────────────────┘
                           └──────────────┘
                                  │1
                                  │
@@ -190,16 +220,35 @@ Structured MySQL database containing five main tables:
 │ status       │          │ status       │          │ new_status                  │
 │ recruiter_id │          │ resume_url   │          │ changed_by_id               │
 └──────────────┘          └──────────────┘          │ note                        │
-                                                    └─────────────────────────────┘
+                                 │1                 └─────────────────────────────┘
+                                 │
+                                 │1
+                          ┌────────────────────────┐
+                          │  ai_screening_results  │
+                          ├────────────────────────┤
+                          │ id                     │
+                          │ application_id (FK)    │
+                          │ overall_score          │
+                          │ recommendation         │
+                          │ model_name             │
+                          │ cost_estimation        │
+                          └────────────────────────┘
 ```
 
 ### Tables
 
 *   **roles**: `id`, `role_name`
-*   **users**: `id`, `full_name`, `email`, `password`, `enabled`, `resume_url`, `created_at`, `updated_at`, `role_id`
-*   **jobs**: `id`, `title`, `company`, `location`, `description`, `employmentType`, `experienceRequired`, `salaryRange`, `status`, `recruiter_id`, `created_at`, `updated_at`
+*   **companies**: `id`, `name`, `domain`, `hiring_preferences`, `created_at`, `updated_at`
+*   **users**: `id`, `full_name`, `email`, `password`, `enabled`, `resume_url`, `created_at`, `updated_at`, `role_id`, `company_id`
+*   **jobs**: `id`, `title`, `company_name`, `location`, `description`, `employmentType`, `experienceRequired`, `salaryRange`, `status`, `recruiter_id`, `created_at`, `updated_at`
 *   **applications**: `id`, `candidate_id`, `job_id`, `status`, `resume_url`, `created_at`, `updated_at`
 *   **application_status_history**: `id`, `application_id`, `previous_status`, `new_status`, `changed_by_id`, `note`, `created_at`
+*   **company_ai_configs**: `id`, `company_id`, `ai_provider`, `api_key`, `model_name`, `resume_analysis_prompt`, `temperature`, `max_tokens`, `enabled`, `created_at`, `updated_at`
+*   **ai_screening_results**: `id`, `application_id`, `overall_score`, `experience_score`, `education_score`, `projects_score`, `certifications_score`, `recommendation`, `raw_json_response`, `prompt_version`, `model_name`, `prompt_tokens`, `completion_tokens`, `total_tokens`, `cost_estimation`, `screened_at`
+*   **ai_screening_strengths**: `screening_result_id`, `strength`
+*   **ai_screening_weaknesses**: `screening_result_id`, `weakness`
+*   **ai_screening_matched_skills**: `screening_result_id`, `matched_skill`
+*   **ai_screening_missing_skills**: `screening_result_id`, `missing_skill`
 
 ---
 
