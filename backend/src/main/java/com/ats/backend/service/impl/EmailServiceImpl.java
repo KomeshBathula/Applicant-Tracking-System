@@ -8,6 +8,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.HtmlUtils;
 
 @Service
 @Slf4j
@@ -63,6 +64,10 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async
     public void sendApplicationSubmissionEmail(String candidateEmail, String candidateName, String jobTitle, String recruiterEmail, String recruiterName) {
+        candidateName = HtmlUtils.htmlEscape(candidateName);
+        jobTitle = HtmlUtils.htmlEscape(jobTitle);
+        recruiterName = HtmlUtils.htmlEscape(recruiterName);
+        recruiterEmail = HtmlUtils.htmlEscape(recruiterEmail);
         String subject = "Application Received: " + jobTitle + " at ATS Corporation";
         String body = String.format(
             "<html>" +
@@ -87,22 +92,14 @@ public class EmailServiceImpl implements EmailService {
         sendEmail(candidateEmail, recruiterName + " via ATS", recruiterEmail, subject, body);
     }
 
-    private String escapeHtml(String text) {
-        if (text == null) {
-            return null;
-        }
-        return text.replace("&", "&amp;")
-                   .replace("<", "&lt;")
-                   .replace(">", "&gt;")
-                   .replace("\"", "&quot;")
-                   .replace("'", "&#x27;")
-                   .replace("/", "&#x2F;");
-    }
-
     @Override
     @Async
     public void sendApplicationStatusUpdatedEmail(String candidateEmail, String candidateName, String jobTitle, String newStatus, String note, String recruiterEmail, String recruiterName) {
-        String escapedNote = escapeHtml(note);
+        candidateName = HtmlUtils.htmlEscape(candidateName);
+        jobTitle = HtmlUtils.htmlEscape(jobTitle);
+        recruiterName = HtmlUtils.htmlEscape(recruiterName);
+        recruiterEmail = HtmlUtils.htmlEscape(recruiterEmail);
+        String escapedNote = note != null ? HtmlUtils.htmlEscape(note) : null;
         String noteSection = (escapedNote != null && !escapedNote.trim().isEmpty()) 
             ? String.format("<div style='background-color: #f7f6f3; padding: 15px; border-left: 4px solid #0f6e5e; margin: 15px 0; border-radius: 0 6px 6px 0;'><strong>Recruiter's Note:</strong><br/>%s</div>", escapedNote) 
             : "";
@@ -200,6 +197,10 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async
     public void sendApplicationWithdrawnEmail(String candidateEmail, String candidateName, String jobTitle, String recruiterEmail, String recruiterName) {
+        candidateName = HtmlUtils.htmlEscape(candidateName);
+        jobTitle = HtmlUtils.htmlEscape(jobTitle);
+        recruiterName = HtmlUtils.htmlEscape(recruiterName);
+        recruiterEmail = HtmlUtils.htmlEscape(recruiterEmail);
         String subject = "Application Withdrawn: " + jobTitle;
         String body = String.format(
             "<html>" +
@@ -227,6 +228,11 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async
     public void sendApplicationWithdrawnByAdminEmail(String candidateEmail, String candidateName, String jobTitle, String recruiterEmail, String recruiterName, String adminName) {
+        candidateName = HtmlUtils.htmlEscape(candidateName);
+        jobTitle = HtmlUtils.htmlEscape(jobTitle);
+        recruiterName = HtmlUtils.htmlEscape(recruiterName);
+        recruiterEmail = HtmlUtils.htmlEscape(recruiterEmail);
+        adminName = HtmlUtils.htmlEscape(adminName);
         String subject = "Application Withdrawn by Administrator: " + jobTitle;
         String body = String.format(
             "<html>" +

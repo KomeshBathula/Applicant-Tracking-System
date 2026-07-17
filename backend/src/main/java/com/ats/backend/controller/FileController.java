@@ -61,9 +61,13 @@ public class FileController {
                 String contentType = fileOwner.getResumeContentType() != null ? fileOwner.getResumeContentType() : "application/pdf";
                 String downloadFilename = fileOwner.getResumeFilename() != null ? fileOwner.getResumeFilename() : "resume.pdf";
 
+                org.springframework.http.ContentDisposition contentDisposition = org.springframework.http.ContentDisposition.builder("inline")
+                        .filename(downloadFilename)
+                        .build();
+
                 return ResponseEntity.ok()
                         .contentType(MediaType.parseMediaType(contentType))
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + downloadFilename + "\"")
+                        .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
                         .body(new ByteArrayResource(fileOwner.getResumeData()));
             } else {
                 return ResponseEntity.notFound().build();

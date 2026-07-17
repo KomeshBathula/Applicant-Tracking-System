@@ -69,6 +69,8 @@ const AppLayout = ({ children, activeTab, setActiveTab, navigationItems, roleTit
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [panelOpen, setPanelOpen] = useState(false);
+    const [loadingNotifications, setLoadingNotifications] = useState(false);
+    const [notificationsError, setNotificationsError] = useState(false);
     const dropdownRef = useRef(null);
 
     const fetchUnreadCount = async () => {
@@ -83,13 +85,20 @@ const AppLayout = ({ children, activeTab, setActiveTab, navigationItems, roleTit
     };
 
     const fetchNotifications = async () => {
+        setLoadingNotifications(true);
+        setNotificationsError(false);
         try {
             const res = await api.get('/notifications', { params: { page: 0, size: 10 } });
             if (res.data && res.data.success && res.data.data.content) {
                 setNotifications(res.data.data.content);
+            } else {
+                setNotificationsError(true);
             }
         } catch (err) {
             console.error('Error fetching notifications:', err);
+            setNotificationsError(true);
+        } finally {
+            setLoadingNotifications(false);
         }
     };
 
@@ -261,14 +270,24 @@ const AppLayout = ({ children, activeTab, setActiveTab, navigationItems, roleTit
                                         )}
                                     </div>
                                     <div className="notification-list">
-                                        {notifications.length === 0 ? (
+                                        {loadingNotifications ? (
+                                            <div className="notification-empty">
+                                                <span className="notification-empty-icon">⏳</span>
+                                                <span>Loading notifications...</span>
+                                            </div>
+                                        ) : notificationsError ? (
+                                            <div className="notification-empty">
+                                                <span className="notification-empty-icon">⚠️</span>
+                                                <span>Failed to load notifications.</span>
+                                            </div>
+                                        ) : notifications.length === 0 ? (
                                             <div className="notification-empty">
                                                 <span className="notification-empty-icon">🔔</span>
                                                 <span>You're all caught up!</span>
                                             </div>
                                         ) : (
                                             notifications.map(n => (
-                                                <div 
+                                                <button 
                                                     key={n.id} 
                                                     className={`notification-item ${!n.readStatus ? 'unread' : ''}`}
                                                     onClick={() => handleNotificationClick(n)}
@@ -281,7 +300,7 @@ const AppLayout = ({ children, activeTab, setActiveTab, navigationItems, roleTit
                                                         <div className="notification-item-message">{n.message}</div>
                                                         <div className="notification-item-time">{formatTimeAgo(n.createdAt)}</div>
                                                     </div>
-                                                </div>
+                                                </button>
                                             ))
                                         )}
                                     </div>

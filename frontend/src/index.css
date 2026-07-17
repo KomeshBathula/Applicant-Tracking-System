@@ -983,8 +983,7 @@ pre,
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: 360px;
-  max-width: calc(100vw - 32px);
+  width: min(360px, calc(100vw - 24px));
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-lg);
@@ -1040,13 +1039,19 @@ pre,
 .notification-item {
   padding: 12px 16px;
   border-bottom: 1px solid var(--border-color);
+  border-left: 3px solid transparent;
+  border-right: none;
+  border-top: none;
   display: flex;
   gap: 12px;
   cursor: pointer;
   transition: background-color var(--transition-fast);
   text-align: left;
   background-color: transparent;
-  border-left: 3px solid transparent;
+  width: 100%;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
 }
 
 .notification-item:hover {
@@ -1104,7 +1109,7 @@ pre,
   color: var(--text-secondary);
   line-height: 1.4;
   margin-bottom: 4px;
-  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .notification-item-time {

@@ -507,6 +507,7 @@ const Dashboard = () => {
 
 const ViewJobDetailsModal = ({ job, onClose }) => {
     const dialogRef = React.useRef(null);
+    const subDialogRef = React.useRef(null);
     const closeButtonRef = React.useRef(null);
     
     const [modalTab, setModalTab] = React.useState('details');
@@ -529,6 +530,7 @@ const ViewJobDetailsModal = ({ job, onClose }) => {
     const [timelineApp, setTimelineApp] = React.useState(null);
     const [timelineHistory, setTimelineHistory] = React.useState([]);
     const [loadingTimeline, setLoadingTimeline] = React.useState(false);
+    const latestRequestRef = React.useRef(0);
 
     // Alert toast states
     const [subAlertText, setSubAlertText] = React.useState(null);
@@ -543,6 +545,7 @@ const ViewJobDetailsModal = ({ job, onClose }) => {
     };
 
     const fetchApplicants = async (page = 0, searchVal = search, statusVal = statusFilter) => {
+        const requestId = ++latestRequestRef.current;
         setLoadingApplicants(true);
         try {
             const params = {
@@ -558,21 +561,32 @@ const ViewJobDetailsModal = ({ job, onClose }) => {
                 delete params.search;
             }
             const res = await api.get(`/applications/job/${job.id}`, { params });
+            if (requestId !== latestRequestRef.current) {
+                return; // Stale request, ignore response
+            }
             if (res.data && res.data.success) {
                 setApplicants(res.data.data.content);
                 setAppTotalPages(res.data.data.totalPages);
                 setAppCurrentPage(res.data.data.number);
             }
         } catch (err) {
-            console.error('Error fetching applicants:', err);
-            showSubNotification('Failed to fetch applicants list.', 'error');
+            if (requestId === latestRequestRef.current) {
+                console.error('Error fetching applicants:', err);
+                showSubNotification('Failed to fetch applicants list.', 'error');
+            }
         } finally {
-            setLoadingApplicants(false);
+            if (requestId === latestRequestRef.current) {
+                setLoadingApplicants(false);
+            }
         }
     };
 
     const handleUpdateStatus = async () => {
         if (isSavingStatus) return;
+        if (updatingApp && newStatus === updatingApp.status) {
+            showSubNotification('Please select a new status to save changes.', 'error');
+            return;
+        }
         setIsSavingStatus(true);
         try {
             const res = await api.patch(`/applications/${updatingApp.id}/status`, {
@@ -665,7 +679,9 @@ const ViewJobDetailsModal = ({ job, onClose }) => {
         const handleKeyDown = (e) => {
             if (e.key === 'Escape') {
                 if (updatingApp) {
-                    setUpdatingApp(null);
+                    if (!isSavingStatus) {
+                        setUpdatingApp(null);
+                    }
                 } else if (timelineApp) {
                     setTimelineApp(null);
                 } else {
@@ -677,8 +693,10 @@ const ViewJobDetailsModal = ({ job, onClose }) => {
 
         const handleKeyDownTrap = (e) => {
             if (e.key === 'Tab') {
-                if (!dialogRef.current) return;
-                const focusableElements = dialogRef.current.querySelectorAll(
+                const activeContainer = updatingApp ? subDialogRef.current : dialogRef.current;
+                if (!activeContainer) return;
+                
+                const focusableElements = activeContainer.querySelectorAll(
                     'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
                 );
                 if (focusableElements.length === 0) return;
@@ -699,14 +717,22 @@ const ViewJobDetailsModal = ({ job, onClose }) => {
             }
         };
         
-        const modalContainer = dialogRef.current;
-        modalContainer?.addEventListener('keydown', handleKeyDownTrap);
+        window.addEventListener('keydown', handleKeyDownTrap);
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
-            modalContainer?.removeEventListener('keydown', handleKeyDownTrap);
+            window.removeEventListener('keydown', handleKeyDownTrap);
         };
-    }, [onClose, updatingApp, timelineApp]);
+    }, [onClose, updatingApp, timelineApp, isSavingStatus]);
+
+    React.useEffect(() => {
+        if (updatingApp && subDialogRef.current) {
+            const firstInput = subDialogRef.current.querySelector('button, select, textarea, input');
+            if (firstInput) {
+                firstInput.focus();
+            }
+        }
+    }, [updatingApp]);
 
     return (
         <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -949,8 +975,19 @@ const ViewJobDetailsModal = ({ job, onClose }) => {
 
             {/* Nested Status Update Sub-Modal Overlay */}
             {updatingApp && (
-                <div className="modal-backdrop" style={{ zIndex: 1100 }} onClick={(e) => e.target === e.currentTarget && !isSavingStatus && setUpdatingApp(null)}>
-                    <div className="modal-content" style={{ borderTop: '4px solid var(--primary-color)', maxWidth: '460px' }}>
+                <div 
+                    className="modal-backdrop" 
+                    style={{ zIndex: 1100 }} 
+                    onClick={(e) => e.target === e.currentTarget && !isSavingStatus && setUpdatingApp(null)}
+                >
+                    <div 
+                        ref={subDialogRef} 
+                        className="modal-content" 
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="submodal-title"
+                        style={{ borderTop: '4px solid var(--primary-color)', maxWidth: '460px' }}
+                    >
                         {isSavingStatus ? (
                             <div style={{ padding: '3.5rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
                                 <style>{`
@@ -973,7 +1010,7 @@ const ViewJobDetailsModal = ({ job, onClose }) => {
                         ) : (
                             <>
                                 <div className="card-header" style={{ padding: '1rem 1.25rem' }}>
-                                    <h4 className="card-title" style={{ fontSize: '1rem' }}>Update Application Status</h4>
+                                    <h4 id="submodal-title" className="card-title" style={{ fontSize: '1rem' }}>Update Application Status</h4>
                                     <button className="btn btn-ghost btn-sm" style={{ padding: 0, width: '24px', height: '24px' }} onClick={() => setUpdatingApp(null)}>✕</button>
                                 </div>
                                 <div className="card-body" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
