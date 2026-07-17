@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/recruiter")
 @Tag(name = "Recruiter Controller", description = "Endpoints restricted to RECRUITER or ADMIN roles")
@@ -48,5 +50,13 @@ public class RecruiterController {
         Page<UserDto> candidates = userRepository.findByRoleRoleName(RoleName.ROLE_CANDIDATE, PageRequest.of(page, size))
                 .map(userMapper::toDto);
         return ResponseEntity.ok(ApiResponse.success("Candidates list retrieved successfully", candidates));
+    }
+
+    @GetMapping("/interviewers")
+    @Operation(summary = "Get potential interviewers list", description = "Accessible by RECRUITER and ADMIN roles.")
+    public ResponseEntity<ApiResponse<List<UserDto>>> getInterviewers() {
+        List<UserDto> interviewers = userRepository.findByRoleRoleName(RoleName.ROLE_RECRUITER, PageRequest.of(0, 100))
+                .getContent().stream().map(userMapper::toDto).toList();
+        return ResponseEntity.ok(ApiResponse.success("Interviewers list retrieved successfully", interviewers));
     }
 }
