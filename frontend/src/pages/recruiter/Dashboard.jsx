@@ -567,6 +567,91 @@ const ViewJobDetailsModal = ({ job, onClose }) => {
     const [cancelNote, setCancelNote] = React.useState('');
     const [cancellingInterviewId, setCancellingInterviewId] = React.useState(null);
 
+    // Recruiter Notes states
+    const [notesList, setNotesList] = React.useState([]);
+    const [loadingNotes, setLoadingNotes] = React.useState(false);
+    const [newNoteContent, setNewNoteContent] = React.useState('');
+    const [savingNote, setSavingNote] = React.useState(false);
+    const [editingNoteId, setEditingNoteId] = React.useState(null);
+    const [editingNoteContent, setEditingNoteContent] = React.useState('');
+
+    const fetchAppNotes = async (appId) => {
+        setLoadingNotes(true);
+        try {
+            const res = await api.get(`/notes/application/${appId}`);
+            if (res.data && res.data.success) {
+                setNotesList(res.data.data);
+            }
+        } catch (err) {
+            console.error('Error fetching app notes:', err);
+        } finally {
+            setLoadingNotes(false);
+        }
+    };
+
+    const handleCreateNote = async (e) => {
+        e.preventDefault();
+        if (!newNoteContent.trim()) return;
+        setSavingNote(true);
+        try {
+            const res = await api.post('/notes', {
+                applicationId: selectedApp.id,
+                content: newNoteContent
+            });
+            if (res.data && res.data.success) {
+                setNewNoteContent('');
+                fetchAppNotes(selectedApp.id);
+                showSubNotification('Note added successfully!', 'success');
+            } else {
+                showSubNotification(res.data.message || 'Failed to add note.', 'error');
+            }
+        } catch (err) {
+            console.error('Error creating note:', err);
+            showSubNotification(err.response?.data?.message || 'Failed to add note.', 'error');
+        } finally {
+            setSavingNote(false);
+        }
+    };
+
+    const handleUpdateNote = async (noteId) => {
+        if (!editingNoteContent.trim()) return;
+        setSavingNote(true);
+        try {
+            const res = await api.put(`/notes/${noteId}`, {
+                content: editingNoteContent
+            });
+            if (res.data && res.data.success) {
+                setEditingNoteId(null);
+                setEditingNoteContent('');
+                fetchAppNotes(selectedApp.id);
+                showSubNotification('Note updated successfully!', 'success');
+            } else {
+                showSubNotification(res.data.message || 'Failed to update note.', 'error');
+            }
+        } catch (err) {
+            console.error('Error updating note:', err);
+            showSubNotification(err.response?.data?.message || 'Failed to update note.', 'error');
+        } finally {
+            setSavingNote(false);
+        }
+    };
+
+    const handleDeleteNote = async (noteId) => {
+        if (!window.confirm('Are you sure you want to delete this note?')) return;
+        try {
+            const res = await api.delete(`/notes/${noteId}`);
+            if (res.data && res.data.success) {
+                fetchAppNotes(selectedApp.id);
+                showSubNotification('Note deleted successfully!', 'success');
+            } else {
+                showSubNotification(res.data.message || 'Failed to delete note.', 'error');
+            }
+        } catch (err) {
+            console.error('Error deleting note:', err);
+            showSubNotification(err.response?.data?.message || 'Failed to delete note.', 'error');
+        }
+    };
+
     const getInterviewStatusBadge = (status) => {
         switch (status) {
             case 'SCHEDULED':
@@ -844,6 +929,7 @@ const ViewJobDetailsModal = ({ job, onClose }) => {
         if (selectedApp) {
             fetchAppInterviews(selectedApp.id);
             fetchTimeline(selectedApp);
+            fetchAppNotes(selectedApp.id);
             setNewStatus(selectedApp.status);
             setNotes('');
         }
@@ -1671,11 +1757,122 @@ const ViewJobDetailsModal = ({ job, onClose }) => {
                             )}
 
                             {appTab === 'notes' && (
-                                <div>
-                                    <div style={{ padding: '2rem', textAlign: 'center', border: '1px dashed var(--border-color)', borderRadius: '8px', color: 'var(--text-muted)' }}>
-                                        <h5 style={{ marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Recruiter Notes Feature</h5>
-                                        <p style={{ fontSize: '0.85rem' }}>Save internal recruiter feedback, scorecards, and hiring comments here. Available in the next update.</p>
-                                    </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                    <h5 style={{ fontWeight: 600, marginBottom: 0 }}>Hiring Feedback & Recruiter Notes</h5>
+                                    
+                                    {/* Note entry form */}
+                                    <form onSubmit={handleCreateNote} style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem', backgroundColor: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        <div className="form-group" style={{ marginBottom: 0 }}>
+                                            <textarea 
+                                                className="form-control"
+                                                rows="3"
+                                                placeholder="Add internal notes, interviewer feedback, or comments about this applicant..."
+                                                value={newNoteContent}
+                                                onChange={(e) => setNewNoteContent(e.target.value)}
+                                                required
+                                                style={{ fontSize: '0.85rem' }}
+                                            />
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                            <button type="submit" className="btn btn-primary btn-sm" disabled={savingNote || !newNoteContent.trim()}>
+                                                {savingNote ? 'Adding...' : 'Add Note'}
+                                            </button>
+                                        </div>
+                                    </form>
+
+                                    {/* Notes Feed list */}
+                                    {loadingNotes ? (
+                                        <div className="skeleton" style={{ height: '80px' }}></div>
+                                    ) : notesList.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '2.5rem 1rem', border: '1px dashed var(--border-color)', borderRadius: '8px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                            No internal notes recorded yet. Be the first to add feedback!
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                            {notesList.map(note => {
+                                                const isAuthor = user && (note.authorEmail === user.email || note.authorId === user.id);
+                                                const isEditingThisNote = editingNoteId === note.id;
+
+                                                return (
+                                                    <div key={note.id} style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem', backgroundColor: 'var(--bg-card)' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                                                            <div>
+                                                                <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>{note.authorName}</strong>
+                                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>({note.authorEmail})</span>
+                                                            </div>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                                    {new Date(note.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+                                                                </span>
+                                                                {isAuthor && !isEditingThisNote && (
+                                                                    <div style={{ display: 'inline-flex', gap: '0.25rem' }}>
+                                                                        <button 
+                                                                            className="btn btn-ghost btn-sm"
+                                                                            style={{ padding: '0 4px', height: '20px', fontSize: '0.7rem', color: 'var(--primary-color)' }}
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setEditingNoteId(note.id);
+                                                                                setEditingNoteContent(note.content);
+                                                                            }}
+                                                                        >
+                                                                            Edit
+                                                                        </button>
+                                                                        <button 
+                                                                            className="btn btn-ghost btn-sm"
+                                                                            style={{ padding: '0 4px', height: '20px', fontSize: '0.7rem', color: 'var(--danger-color)' }}
+                                                                            type="button"
+                                                                            onClick={() => handleDeleteNote(note.id)}
+                                                                        >
+                                                                            Delete
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {isEditingThisNote ? (
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                                                <textarea 
+                                                                    className="form-control"
+                                                                    rows="3"
+                                                                    value={editingNoteContent}
+                                                                    onChange={(e) => setEditingNoteContent(e.target.value)}
+                                                                    style={{ fontSize: '0.85rem' }}
+                                                                />
+                                                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                                    <button 
+                                                                        className="btn btn-secondary btn-sm" 
+                                                                        style={{ height: '26px', fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setEditingNoteId(null);
+                                                                            setEditingNoteContent('');
+                                                                        }}
+                                                                        disabled={savingNote}
+                                                                    >
+                                                                        Cancel
+                                                                    </button>
+                                                                    <button 
+                                                                        className="btn btn-primary btn-sm"
+                                                                        style={{ height: '26px', fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
+                                                                        type="button"
+                                                                        onClick={() => handleUpdateNote(note.id)}
+                                                                        disabled={savingNote || !editingNoteContent.trim()}
+                                                                    >
+                                                                        Save
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
+                                                                {note.content}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
