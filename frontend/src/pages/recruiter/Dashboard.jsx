@@ -781,61 +781,75 @@ const ViewJobDetailsModal = ({ job, onClose }) => {
                     ) : (
                         <div>
                             {/* Filters & Search for Applicants */}
-                            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem' }}>
-                                <input 
-                                    type="text" 
-                                    className="form-control" 
-                                    placeholder="Search by candidate name..."
-                                    style={{ flex: 1, minWidth: '180px', height: '34px', fontSize: '0.85rem' }}
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && fetchApplicants(0, search, statusFilter)}
-                                />
-                                <select 
-                                    className="form-control" 
-                                    style={{ 
-                                        width: '160px', 
-                                        height: '34px', 
-                                        fontSize: '0.85rem',
-                                        borderRadius: '6px',
-                                        backgroundColor: 'var(--bg-input)',
-                                        color: 'var(--text-primary)',
-                                        border: '1px solid var(--border-color)',
-                                        padding: '0 0.5rem',
-                                        cursor: 'pointer',
-                                        outline: 'none',
-                                        appearance: 'none',
-                                        WebkitAppearance: 'none',
-                                        MozAppearance: 'none',
-                                        backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                                        backgroundRepeat: 'no-repeat',
-                                        backgroundPosition: 'right 0.65rem center',
-                                        backgroundSize: '0.9em',
-                                        paddingRight: '1.75rem',
-                                        transition: 'all 0.15s ease'
-                                    }}
-                                    value={statusFilter}
-                                    onChange={(e) => {
-                                        setStatusFilter(e.target.value);
-                                        fetchApplicants(0, search, e.target.value);
-                                    }}
-                                >
-                                    <option value="ALL">All Statuses</option>
-                                    <option value="APPLIED">Applied</option>
-                                    <option value="UNDER_REVIEW">Under Review</option>
-                                    <option value="SHORTLISTED">Shortlisted</option>
-                                    <option value="INTERVIEW_SCHEDULED">Interview Scheduled</option>
-                                    <option value="INTERVIEWED">Interviewed</option>
-                                    <option value="OFFERED">Offered</option>
-                                    <option value="REJECTED">Rejected</option>
-                                    <option value="WITHDRAWN">Withdrawn</option>
-                                </select>
-                                <button className="btn btn-primary btn-sm" style={{ height: '34px' }} onClick={() => fetchApplicants(0, search, statusFilter)}>Filter</button>
-                                <button className="btn btn-secondary btn-sm" style={{ height: '34px' }} onClick={() => {
-                                    setSearch('');
-                                    setStatusFilter('ALL');
-                                    fetchApplicants(0, '', 'ALL');
-                                }}>Reset</button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                    <input 
+                                        type="text" 
+                                        className="form-control" 
+                                        placeholder="Search by candidate name..."
+                                        style={{ flex: 1, minWidth: '180px', height: '34px', fontSize: '0.85rem' }}
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && fetchApplicants(0, search, statusFilter)}
+                                    />
+                                    <button className="btn btn-primary btn-sm" style={{ height: '34px' }} onClick={() => fetchApplicants(0, search, statusFilter)}>Search</button>
+                                    <button className="btn btn-secondary btn-sm" style={{ height: '34px' }} onClick={() => {
+                                        setSearch('');
+                                        setStatusFilter('ALL');
+                                        fetchApplicants(0, '', 'ALL');
+                                    }}>Reset</button>
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginRight: '0.25rem' }}>Status:</span>
+                                    {[
+                                        { value: 'ALL', label: 'All', color: 'var(--primary-color)', bg: 'rgba(15, 110, 94, 0.08)' },
+                                        { value: 'APPLIED', label: 'Applied', color: 'var(--status-applied)', bg: 'rgba(52, 168, 83, 0.08)' },
+                                        { value: 'UNDER_REVIEW', label: 'Under Review', color: 'var(--status-review)', bg: 'rgba(251, 188, 5, 0.08)' },
+                                        { value: 'SHORTLISTED', label: 'Shortlisted', color: 'var(--info-color)', bg: 'rgba(26, 115, 232, 0.08)' },
+                                        { value: 'INTERVIEW_SCHEDULED', label: 'Interview Scheduled', color: 'var(--status-interview)', bg: 'rgba(232, 115, 26, 0.08)' },
+                                        { value: 'INTERVIEWED', label: 'Interviewed', color: 'var(--primary-color)', bg: 'rgba(15, 110, 94, 0.08)' },
+                                        { value: 'OFFERED', label: 'Offered', color: 'var(--status-offered)', bg: 'rgba(15, 110, 94, 0.08)' },
+                                        { value: 'REJECTED', label: 'Rejected', color: 'var(--status-rejected)', bg: 'rgba(217, 48, 37, 0.08)' },
+                                        { value: 'WITHDRAWN', label: 'Withdrawn', color: 'var(--text-muted)', bg: 'rgba(128, 128, 128, 0.08)' }
+                                    ].map(opt => {
+                                        const isSelected = statusFilter === opt.value;
+                                        return (
+                                            <button
+                                                key={opt.value}
+                                                type="button"
+                                                onClick={() => {
+                                                    setStatusFilter(opt.value);
+                                                    fetchApplicants(0, search, opt.value);
+                                                }}
+                                                style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    padding: '0.35rem 0.65rem',
+                                                    borderRadius: '20px',
+                                                    border: isSelected ? `1.5px solid ${opt.color}` : '1px solid var(--border-color)',
+                                                    backgroundColor: isSelected ? opt.bg : 'transparent',
+                                                    color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                                    fontWeight: isSelected ? '600' : '400',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.15s ease',
+                                                    fontSize: '0.75rem'
+                                                }}
+                                            >
+                                                {opt.value !== 'ALL' && (
+                                                    <span style={{ 
+                                                        width: '6px', 
+                                                        height: '6px', 
+                                                        borderRadius: '50%', 
+                                                        backgroundColor: opt.color, 
+                                                        marginRight: '6px',
+                                                        display: 'inline-block'
+                                                    }} />
+                                                )}
+                                                {opt.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
                             {loadingApplicants ? (
@@ -984,12 +998,36 @@ const ViewJobDetailsModal = ({ job, onClose }) => {
                                                 { value: 'REJECTED', label: 'Rejected', color: 'var(--status-rejected)', bg: 'rgba(217, 48, 37, 0.08)' },
                                                 { value: 'WITHDRAWN', label: 'Withdrawn', color: 'var(--text-muted)', bg: 'rgba(128, 128, 128, 0.08)' }
                                             ].map(opt => {
+                                                const STATUS_ORDER = {
+                                                    'APPLIED': 1,
+                                                    'UNDER_REVIEW': 2,
+                                                    'SHORTLISTED': 3,
+                                                    'INTERVIEW_SCHEDULED': 4,
+                                                    'INTERVIEWED': 5,
+                                                    'OFFERED': 6,
+                                                    'REJECTED': 7,
+                                                    'WITHDRAWN': 8
+                                                };
+                                                const currentStatusVal = updatingApp.status;
+                                                const isCurrentTerminal = currentStatusVal === 'REJECTED' || currentStatusVal === 'WITHDRAWN';
+                                                
                                                 const isSelected = newStatus === opt.value;
+                                                const isDisabled = (() => {
+                                                    if (isCurrentTerminal) return true;
+                                                    if (opt.value === currentStatusVal) return true;
+                                                    if (opt.value === 'WITHDRAWN') return true;
+                                                    if (opt.value === 'REJECTED') return false;
+                                                    const currentOrder = STATUS_ORDER[currentStatusVal] || 0;
+                                                    const targetOrder = STATUS_ORDER[opt.value] || 0;
+                                                    return targetOrder <= currentOrder;
+                                                })();
+
                                                 return (
                                                     <button
                                                         key={opt.value}
                                                         type="button"
                                                         onClick={() => setNewStatus(opt.value)}
+                                                        disabled={isDisabled}
                                                         style={{
                                                             display: 'flex',
                                                             alignItems: 'center',
@@ -999,7 +1037,9 @@ const ViewJobDetailsModal = ({ job, onClose }) => {
                                                             backgroundColor: isSelected ? opt.bg : 'var(--bg-card)',
                                                             color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
                                                             fontWeight: isSelected ? '700' : '400',
-                                                            cursor: 'pointer',
+                                                            cursor: isDisabled ? 'not-allowed' : 'pointer',
+                                                            opacity: isDisabled ? 0.4 : 1,
+                                                            pointerEvents: isDisabled ? 'none' : 'auto',
                                                             transition: 'all 0.15s ease',
                                                             fontSize: '0.8rem',
                                                             textAlign: 'left'

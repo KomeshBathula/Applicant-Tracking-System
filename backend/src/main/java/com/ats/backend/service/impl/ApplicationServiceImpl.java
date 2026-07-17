@@ -195,9 +195,13 @@ public class ApplicationServiceImpl implements ApplicationService {
 
         ApplicationStatus previousStatus = application.getStatus();
 
-        // Validation: Prevent invalid status transitions
+        // Validation: Prevent invalid status transitions (one-way automata)
         if (previousStatus == ApplicationStatus.WITHDRAWN) {
             throw new InvalidRequestException("Cannot update the status of a withdrawn application.");
+        }
+
+        if (previousStatus == ApplicationStatus.REJECTED) {
+            throw new InvalidRequestException("Cannot update the status of a rejected application.");
         }
 
         if (newStatus == ApplicationStatus.WITHDRAWN) {
@@ -206,6 +210,11 @@ public class ApplicationServiceImpl implements ApplicationService {
 
         if (previousStatus == newStatus) {
             throw new InvalidRequestException("Application status is already " + newStatus);
+        }
+
+        // One-way progression: New status must be REJECTED, or higher ordinal than previous status
+        if (newStatus != ApplicationStatus.REJECTED && newStatus.ordinal() <= previousStatus.ordinal()) {
+            throw new InvalidRequestException("Invalid status transition. Status can only progress forward (e.g. from " + previousStatus.name() + " to " + newStatus.name() + " is not allowed).");
         }
 
         // Update status
