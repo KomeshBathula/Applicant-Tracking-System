@@ -36,6 +36,10 @@ function App() {
                             </ProtectedRoute>
                         } 
                     />
+                    <Route path="/candidate/jobs" element={<ProtectedRoute allowedRoles={['CANDIDATE']}><CandidateDashboard section="jobs" /></ProtectedRoute>} />
+                    <Route path="/candidate/applications" element={<ProtectedRoute allowedRoles={['CANDIDATE']}><CandidateDashboard section="applications" /></ProtectedRoute>} />
+                    <Route path="/candidate/interviews" element={<ProtectedRoute allowedRoles={['CANDIDATE']}><CandidateDashboard section="interviews" /></ProtectedRoute>} />
+                    <Route path="/candidate/profile" element={<ProtectedRoute allowedRoles={['CANDIDATE']}><CandidateDashboard section="profile" /></ProtectedRoute>} />
 
                     {/* Recruiter Portal Routes */}
                     <Route path="/recruiter/login" element={<RecruiterLogin />} />
@@ -48,6 +52,11 @@ function App() {
                             </ProtectedRoute>
                         } 
                     />
+                    <Route path="/recruiter/jobs" element={<ProtectedRoute allowedRoles={['RECRUITER']}><RecruiterDashboard section="jobs" /></ProtectedRoute>} />
+                    <Route path="/recruiter/candidates" element={<ProtectedRoute allowedRoles={['RECRUITER']}><RecruiterDashboard section="candidates" /></ProtectedRoute>} />
+                    <Route path="/recruiter/interviews" element={<ProtectedRoute allowedRoles={['RECRUITER']}><RecruiterDashboard section="interviews" /></ProtectedRoute>} />
+                    <Route path="/recruiter/profile" element={<ProtectedRoute allowedRoles={['RECRUITER']}><RecruiterDashboard section="profile" /></ProtectedRoute>} />
+                    <Route path="/recruiter/ai-config" element={<ProtectedRoute allowedRoles={['RECRUITER']}><RecruiterDashboard section="ai-config" /></ProtectedRoute>} />
 
                     {/* Admin Portal Routes (Only accessible by direct link) */}
                     <Route path="/admin/login" element={<AdminLogin />} />
@@ -59,6 +68,9 @@ function App() {
                             </ProtectedRoute>
                         } 
                     />
+                    <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard section="users" /></ProtectedRoute>} />
+                    <Route path="/admin/roles" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard section="roles" /></ProtectedRoute>} />
+                    <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard section="settings" /></ProtectedRoute>} />
 
                     {/* Security & Error Handlers */}
                     <Route path="/unauthorized" element={<Unauthorized />} />

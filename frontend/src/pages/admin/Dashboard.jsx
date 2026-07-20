@@ -1,10 +1,10 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import AppLayout from '../../components/AppLayout';
 
-const Dashboard = () => {
-    const { user, logout } = useContext(AuthContext);
-    const [activeTab, setActiveTab] = useState('dashboard');
+const Dashboard = ({ section = 'dashboard' }) => {
+    const { user } = useContext(AuthContext);
+    const activeTab = section;
 
     useEffect(() => {
         document.title = "Admin Control Center - ATS";
@@ -14,6 +14,7 @@ const Dashboard = () => {
         { 
             id: 'dashboard', 
             label: 'Dashboard', 
+            path: '/admin/dashboard',
             icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="3" width="7" height="9"></rect>
@@ -26,6 +27,7 @@ const Dashboard = () => {
         { 
             id: 'users', 
             label: 'Users', 
+            path: '/admin/users',
             icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -38,6 +40,7 @@ const Dashboard = () => {
         { 
             id: 'roles', 
             label: 'Roles', 
+            path: '/admin/roles',
             icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
@@ -48,6 +51,7 @@ const Dashboard = () => {
         { 
             id: 'settings', 
             label: 'System Settings', 
+            path: '/admin/settings',
             icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="3"></circle>
@@ -60,7 +64,6 @@ const Dashboard = () => {
     return (
         <AppLayout
             activeTab={activeTab}
-            setActiveTab={setActiveTab}
             navigationItems={navigationItems}
             roleTitle="Administrator"
             roleColor="var(--danger-color)"

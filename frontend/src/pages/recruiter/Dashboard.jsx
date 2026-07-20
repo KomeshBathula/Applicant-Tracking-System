@@ -1,4 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import AppLayout from '../../components/AppLayout';
 import api from '../../services/api';
@@ -7,9 +8,11 @@ import JobList from '../../components/JobList';
 import Pagination from '../../components/Pagination';
 import JobForm from '../../components/JobForm';
 
-const Dashboard = () => {
+const Dashboard = ({ section = 'dashboard' }) => {
     const { user, logout } = useContext(AuthContext);
-    const [activeTab, setActiveTab] = useState('dashboard');
+    const navigate = useNavigate();
+    const activeTab = section;
+    const setActiveTab = (tab) => navigate(`/recruiter/${tab}`);
     
     // Stats state
     const [stats, setStats] = useState({ totalJobs: 0, openJobs: 0, closedJobs: 0 });
@@ -34,6 +37,10 @@ const Dashboard = () => {
     const [candidateTotalPages, setCandidateTotalPages] = useState(0);
     const [candidateCurrentPage, setCandidateCurrentPage] = useState(0);
     const [candidateError, setCandidateError] = useState(null);
+
+    // Interviews state
+    const [interviews, setInterviews] = useState([]);
+    const [loadingInterviews, setLoadingInterviews] = useState(false);
 
     // AI Settings State
     const [aiConfig, setAiConfig] = useState({
@@ -179,6 +186,20 @@ const Dashboard = () => {
         }
     };
 
+    const fetchInterviews = async () => {
+        setLoadingInterviews(true);
+        try {
+            const res = await api.get('/interviews/recruiter');
+            if (res.data?.success) {
+                setInterviews(res.data.data || []);
+            }
+        } catch (err) {
+            console.error('Error fetching recruiter interviews:', err);
+        } finally {
+            setLoadingInterviews(false);
+        }
+    };
+
     const handleViewResume = async (resumeUrl) => {
         try {
             const response = await api.get(resumeUrl, {
@@ -201,6 +222,8 @@ const Dashboard = () => {
             fetchJobs({}, 0);
         } else if (activeTab === 'candidates') {
             fetchCandidates(0);
+        } else if (activeTab === 'interviews') {
+            fetchInterviews();
         } else if (activeTab === 'ai-config') {
             fetchAiConfig();
         }
@@ -268,6 +291,7 @@ const Dashboard = () => {
         { 
             id: 'dashboard', 
             label: 'Dashboard', 
+            path: '/recruiter/dashboard',
             icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="3" width="7" height="9"></rect>
@@ -280,6 +304,7 @@ const Dashboard = () => {
         { 
             id: 'jobs', 
             label: 'Jobs', 
+            path: '/recruiter/jobs',
             icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
@@ -291,6 +316,7 @@ const Dashboard = () => {
         { 
             id: 'candidates', 
             label: 'Candidates', 
+            path: '/recruiter/candidates',
             icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -300,9 +326,23 @@ const Dashboard = () => {
                 </svg>
             )
         },
+        {
+            id: 'interviews',
+            label: 'Interviews',
+            path: '/recruiter/interviews',
+            icon: (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+            )
+        },
         ...(user?.role === 'ROLE_COMPANY_ADMIN' || user?.role === 'ROLE_ADMIN' ? [{
             id: 'ai-config',
             label: 'AI Settings',
+            path: '/recruiter/ai-config',
             icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="3"></circle>
@@ -313,6 +353,7 @@ const Dashboard = () => {
         { 
             id: 'profile', 
             label: 'Profile', 
+            path: '/recruiter/profile',
             icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -325,7 +366,6 @@ const Dashboard = () => {
     return (
         <AppLayout
             activeTab={activeTab}
-            setActiveTab={setActiveTab}
             navigationItems={navigationItems}
             roleTitle="Recruiter"
             roleColor="var(--success-color)"
@@ -556,6 +596,59 @@ const Dashboard = () => {
                             )}
                         </div>
                     )}
+                </div>
+            )}
+
+            {activeTab === 'interviews' && (
+                <div className="card">
+                    <div className="card-header">
+                        <h3 className="card-title">Scheduled Interviews</h3>
+                        <p className="card-subtitle">Review the interviews scheduled for your job postings.</p>
+                    </div>
+                    <div className="card-body" style={{ padding: 0 }}>
+                        {loadingInterviews ? (
+                            <div style={{ padding: '2rem' }}>
+                                <div className="skeleton" style={{ height: '32px', marginBottom: '1rem' }}></div>
+                                <div className="skeleton" style={{ height: '32px', marginBottom: '1rem' }}></div>
+                                <div className="skeleton" style={{ height: '32px' }}></div>
+                            </div>
+                        ) : interviews.length === 0 ? (
+                            <div style={{ padding: '3.5rem 2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                <p style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-primary)' }}>No interviews scheduled</p>
+                                <p style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>Interviews you schedule from a candidate application will appear here.</p>
+                            </div>
+                        ) : (
+                            <div style={{ overflowX: 'auto' }}>
+                                <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr>
+                                            <th>Candidate</th>
+                                            <th>Job</th>
+                                            <th>Round</th>
+                                            <th>Date & Time</th>
+                                            <th>Mode</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {interviews.map((interview) => (
+                                            <tr key={interview.id}>
+                                                <td>
+                                                    <strong>{interview.candidateFullName}</strong>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{interview.candidateEmail}</div>
+                                                </td>
+                                                <td>{interview.jobTitle}</td>
+                                                <td>{interview.interviewRound?.replace('_', ' ')}</td>
+                                                <td>{new Date(interview.scheduledDateTime).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</td>
+                                                <td>{interview.interviewMode}</td>
+                                                <td><span className="badge badge-info" style={{ fontSize: '0.7rem' }}>{interview.status}</span></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 

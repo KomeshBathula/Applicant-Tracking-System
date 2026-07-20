@@ -17,7 +17,12 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
     if (!token || !user) {
         // Store location to redirect back after successful login
-        return <Navigate to="/login" state={{ from: location }} replace />;
+        const loginPath = allowedRoles?.includes('ADMIN')
+            ? '/admin/login'
+            : allowedRoles?.includes('RECRUITER')
+                ? '/recruiter/login'
+                : '/candidate/login';
+        return <Navigate to={loginPath} state={{ from: location }} replace />;
     }
 
     // Convert ROLE_ADMIN -> ADMIN, ROLE_RECRUITER -> RECRUITER, ROLE_CANDIDATE -> CANDIDATE
