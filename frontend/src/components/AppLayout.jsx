@@ -1,4 +1,5 @@
 import React, { useContext, useState, useEffect, useRef } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import api from '../services/api';
@@ -61,8 +62,9 @@ const getNotificationIcon = (type) => {
     }
 };
 
-const AppLayout = ({ children, activeTab, setActiveTab, navigationItems, roleTitle, roleColor }) => {
+const AppLayout = ({ children, activeTab, navigationItems, roleTitle, roleColor }) => {
     const { user, logout } = useContext(AuthContext);
+    const navigate = useNavigate();
     const [collapsed, setCollapsed] = useState(false);
     
     // Notifications State
@@ -144,7 +146,7 @@ const AppLayout = ({ children, activeTab, setActiveTab, navigationItems, roleTit
         }
         setPanelOpen(false);
         if (notification.navigationUrl) {
-            window.location.href = notification.navigationUrl;
+            navigate(notification.navigationUrl);
         }
     };
 
@@ -187,15 +189,15 @@ const AppLayout = ({ children, activeTab, setActiveTab, navigationItems, roleTit
                 <div className="sidebar-nav">
                     {!collapsed && <div className="sidebar-group-title">Console</div>}
                     {navigationItems.map((item) => (
-                        <button
+                        <NavLink
                             key={item.id}
+                            to={item.path}
                             className={`sidebar-item ${activeTab === item.id ? 'active' : ''}`}
-                            onClick={() => setActiveTab(item.id)}
                             title={collapsed ? item.label : ""}
                         >
                             <span className="sidebar-item-icon">{item.icon}</span>
                             {!collapsed && <span>{item.label}</span>}
-                        </button>
+                        </NavLink>
                     ))}
                     
                     <button

@@ -14,16 +14,20 @@ const Login = () => {
     const [apiError, setApiError] = useState('');
     const [loading, setLoading] = useState(false);
     const [sessionExpired, setSessionExpired] = useState(false);
+    const requestedLocation = location.state?.from;
+    const returnPath = requestedLocation?.pathname?.startsWith('/candidate/')
+        ? `${requestedLocation.pathname}${requestedLocation.search || ''}${requestedLocation.hash || ''}`
+        : '/candidate/dashboard';
 
     useEffect(() => {
         document.title = "Candidate Sign In - ATS";
         if (user) {
             const roleClean = user.role.replace('ROLE_', '');
             if (roleClean === 'CANDIDATE') {
-                navigate('/candidate/dashboard');
+                navigate(returnPath, { replace: true });
             }
         }
-    }, [user, navigate]);
+    }, [user, navigate, returnPath]);
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -62,7 +66,7 @@ const Login = () => {
         setLoading(false);
 
         if (result.success) {
-            navigate('/candidate/dashboard');
+            navigate(returnPath, { replace: true });
         } else {
             setApiError(result.message);
         }
