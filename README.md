@@ -1,190 +1,169 @@
 # Applicant Tracking System (ATS)
 
-An enterprise-grade, multi-tenant Applicant Tracking System (ATS) featuring hierarchical admin governance, Instagram-style unique username validation, multi-provider AI resume screening (OpenAI, Groq, Anthropic Claude, Google Gemini, DeepSeek), first-time password reset security workflows, scalable server-side paginated user management, and real-time recruiter analytics.
+An enterprise-grade Applicant Tracking System built with Java 21, Spring Boot 3, and React 18. The platform provides multi-tenant recruitment management, role-based access control, Instagram-style unique handle validation, multi-provider AI resume screening, and automated candidate pipeline tracking.
 
 ---
 
 ## Table of Contents
 
-- [Overview](#overview)
+- [Features](#features)
+- [System Architecture](#system-architecture)
+- [Role Hierarchy and Permissions](#role-hierarchy-and-permissions)
+- [Multi-Provider AI Screening Engine](#multi-provider-ai-screening-engine)
 - [Tech Stack](#tech-stack)
-- [Key Recent Features](#key-recent-features)
-- [Architecture](#architecture)
-- [Role Model and Privilege Hierarchy](#role-model-and-privilege-hierarchy)
 - [API Reference](#api-reference)
-- [Database Design](#database-design)
-- [Security & Authentication Implementation](#security--authentication-implementation)
-- [Multi-Provider AI Resume Screening](#multi-provider-ai-resume-screening)
-- [File and Resume Storage](#file-and-resume-storage)
-- [Audit Trail & Status Pipeline](#audit-trail--status-pipeline)
-- [Exception Handling](#exception-handling)
-- [Running Locally](#running-locally)
-- [Docker](#docker)
+- [Database Schema](#database-schema)
+- [Security & Access Control](#security--access-control)
+- [Installation and Setup](#installation-and-setup)
 
 ---
 
-## Overview
+## Features
 
-The platform coordinates job search, application submissions, automated AI screening, and recruitment review workflows across four distinct roles: **Super Admin**, **Company Admin**, **Recruiter**, and **Candidate**.
+### Authentication & User Identity
+- **Role-Scoped Login Interfaces**: Dedicated entry points for Candidates and Recruiters (`/login`), Company Admins (`/company-admin/login`), and System Admins (`/super-admin/login`).
+- **Unique Username Handles**: Instagram-style unique handle format (`@username`) validated in real time during registration with enforced database uniqueness constraints.
+- **Password Complexity Enforcement**: Password requirements (`>= 8` characters, 1 uppercase letter, 1 number, 1 special character) applied across candidate sign-up, admin creation, recruiter provisioning, and password updates.
+- **First-Time Password Reset Workflow**: Newly provisioned Company Admins and Recruiters receive default credentials and are prompted to set a new password on their initial login.
 
-- **Candidates** register with unique Instagram-style `@usernames`, browse open jobs, manage their profiles, upload resumes, and track real-time application progress.
-- **Recruiters** post job listings, review applicant resumes, schedule interviews, and guide candidate applications through structured pipeline status states:
-  `APPLIED → REVIEWING → INTERVIEWING → OFFERED → REJECTED` or `WITHDRAWN`.
-- **Company Admins** provision and manage company recruiters, oversee company job postings, and configure multi-provider AI screening parameters without cluttering their view with individual interview pipelines.
-- **Super Admins** provision Company Admins, inspect global user directories via scalable paginated queries, toggle account access status across all user types (with self-disable protection), and manage system governance policies.
+### Enterprise Admin & Team Management
+- **System Admin Control Center**: Global user directory with server-side Spring Data JPA pagination, search, role filters, and status management (`Disable`/`Enable`). Includes self-protection rules to prevent administrators from locking their own accounts.
+- **Company Provisioning**: System Admins can create Company Admin accounts and link or generate company entities.
+- **Recruiter Management**: Company Admins can provision, monitor, and toggle status for recruiters within their organization.
 
----
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Language | Java 21 / JavaScript (React 18) |
-| Backend Framework | Spring Boot 3.4.1 |
-| AI Integration | Spring AI & Multi-Provider Registry (OpenAI, Groq, Claude, Gemini, DeepSeek) |
-| Frontend Library | React 18 with Vite |
-| Security | Spring Security, JWT (jjwt 0.12.6), BCrypt Password Hashing |
-| Persistence | Spring Data JPA, Hibernate, MySQL 8 |
-| Styling | Vanilla CSS (Dark mode design, glassmorphism, dynamic tokens) |
-| Build Tool | Maven (Backend) / npm & Vite (Frontend) |
-| Utilities | Lombok, ModelMapper / MapStruct, Jackson |
-| File Uploads | Multi-part Servlet File Storage (Header magic-number anti-spoofing) |
-| API Documentation | SpringDoc OpenAPI 3 (Swagger UI) |
+### Candidate Application Pipeline
+- **Job Board & Postings**: Searchable job listings filtered by employment type, experience level, and location.
+- **Application Tracking**: Structured lifecycle state transitions (`APPLIED` → `REVIEWING` → `INTERVIEWING` → `OFFERED` → `REJECTED` / `WITHDRAWN`).
+- **Application Reactivation**: Automatic application reactivation and state history logging for candidates re-applying to previously withdrawn positions.
+- **Resume Upload & Validation**: Double-validation file inspection (MIME magic bytes and file extension) with automated disk pruning upon re-upload.
 
 ---
 
-## Key Recent Features
+## System Architecture
 
-### 1. Unified & Secured Login Systems
-- **Single Portal Authentication**: Unified Candidate and Recruiter sign-in at `/login`. Sign-up is exclusively available for candidates at `/register`.
-- **Secured Admin Portals**: Isolated administrative login interfaces for Super Admin (`/super-admin/login`) and Company Admin (`/company-admin/login`).
-
-### 2. Instagram-Style Unique Username Validation
-- All users possess a mandatory, unique handle (e.g. `@alex_recruiter`, `@john_dev`).
-- Real-time backend API checks verify username availability as the user types during registration and account creation. Non-null unique database schema constraints enforced.
-
-### 3. Strict Password Complexity & Mandatory 1st-Time Reset
-- **Password Complexity Rules**: Enforced across all registration, admin creation, recruiter provisioning, and password update endpoints (`>= 8` characters, 1 uppercase letter, 1 number, 1 special character).
-- **First-Time Password Reset Flow**: Newly created Company Admins and Recruiters are provisioned with initial default passwords. Upon initial login, a mandatory password update overlay (`ChangePasswordModal.jsx`) forces credentials update before granting dashboard access.
-
-### 4. Admin Privilege Hierarchy & Scalable User Management
-- **Super Admin Console**: Dedicated dashboard (`/admin/dashboard`, `/admin/users`, `/admin/roles`, `/admin/settings`).
-  - **Company Admin Provisioning**: Create Company Admins and auto-bind or generate company entities.
-  - **Scalable Paginated User Directory**: Server-side Spring Data JPA `Pageable` queries with indexed filters (`search`, `role`, `companyId`), capping max page size to 100 records for memory safety.
-  - **User Access Management**: Status toggle (`Disable` / `Enable`) enabled across all user types (Candidates, Company Admins, Recruiters, Admins), protected by a self-disabling guard preventing System Admins from disabling their active account.
-  - **Governance Control Center**: Interactive governance tabs for Security Policies, SMTP Mail Gateway, Resume Upload Rules, and Database Infrastructure.
-- **Company Admin Hub**: Dedicated workspace (`/recruiter/dashboard`, `/recruiter/recruiters`, `/recruiter/jobs`, `/recruiter/ai-config`, `/recruiter/profile`).
-  - **Recruiter Provisioning**: Create and manage company recruiters with initial complexity-enforced passwords.
-  - **Enterprise Overview**: High-level metrics for team members, company jobs, and AI engine status.
-
-### 5. Multi-Provider AI Resume Screening Engine
-- Expanded LLM Provider Registry supporting 5 major AI models:
-  - **OpenAI** (`gpt-4o`, `gpt-3.5-turbo`)
-  - **Groq** (`llama-3.3-70b-versatile`, `mixtral-8x7b-32768`)
-  - **Anthropic Claude** (`claude-3-5-sonnet-20241022`, `claude-3-opus-20240229`)
-  - **Google Gemini** (`gemini-1.5-pro`, `gemini-1.5-flash`)
-  - **DeepSeek** (`deepseek-chat`, `deepseek-coder`)
-- Company Admins can configure AI provider selection, API keys, temperature, max response tokens, and custom resume scoring system prompts.
-
----
-
-## Architecture
-
-The project follows a decoupled, layered Spring Boot backend architecture and a modular Vite-powered React single page application.
+The application is structured into a Java Spring Boot backend and a React single-page application frontend.
 
 ```
 Application-Tracking-System/
 ├── backend/
 │   └── src/main/java/com/ats/backend/
-│       ├── config/         # Security, CORS, Async, and OpenAPI configuration
-│       ├── controller/     # REST Controllers (Admin, CompanyAdmin, Auth, Jobs, Applications, Screening)
-│       ├── dto/            # Data Transfer Objects with Bean validation annotations
-│       ├── entity/         # JPA Entities mapping MySQL relational schemas
-│       ├── exception/      # Global Exception handler mapping custom runtime errors
-│       ├── mapper/         # Converters mapping JPA entities to DTOs
-│       ├── repository/     # JPA Data repositories with custom JPQL specifications & left joins
-│       ├── security/       # JWT Token Provider, JwtAuthenticationFilter
-│       └── service/        # Transactional service implementations & AI provider registry
+│       ├── config/         # Security, CORS, Async, and Spring AI configuration
+│       ├── controller/     # REST Endpoints (Admin, CompanyAdmin, Auth, Jobs, Applications, Screening)
+│       ├── dto/            # Data Transfer Objects with Bean Validation constraints
+│       ├── entity/         # JPA Entities mapping relational MySQL tables
+│       ├── exception/      # Global Exception Handler
+│       ├── mapper/         # Entity-to-DTO conversion logic
+│       ├── repository/     # Spring Data JPA Repositories with custom JPQL queries
+│       ├── security/       # JWT Token Provider and JwtAuthenticationFilter
+│       └── service/        # Business logic and AI Provider implementations
 └── frontend/
     └── src/
-        ├── components/     # Reusable layout, modal, and navigation elements
-        ├── context/        # React context wrappers for auth state & username verification
-        ├── pages/          # Candidate, Recruiter, Company Admin, and Super Admin dashboards
-        ├── services/       # Interceptor-supported Axios client (401 token clearing & route exemption)
-        └── index.css       # Premium dynamic dark theme styling system
+        ├── components/     # Layout, modal, and navigation components
+        ├── context/        # React context providers for authentication state
+        ├── pages/          # Candidate, Recruiter, Company Admin, and Admin dashboards
+        ├── services/       # Axios client with interceptors for JWT and error handling
+        └── index.css       # Design tokens and global styles
 ```
 
 ---
 
-## Role Model and Privilege Hierarchy
+## Role Hierarchy and Permissions
 
-Four roles dictate system authorization:
+The platform enforces a four-tier permission hierarchy:
 
-| Role | Access Scope & Capabilities |
+| Role | Access Scope & Responsibilities |
 |---|---|
-| `ROLE_ADMIN` (Super Admin) | Unrestricted global access. Provisions Company Admins, manages scalable paginated user directory across all user types, configures global system settings, and inspects access control matrices. Protected from self-disabling. |
-| `ROLE_COMPANY_ADMIN` | Executive enterprise manager. Provisions company recruiters, manages company recruiters (status toggle), oversees company job postings, and configures multi-provider AI screening parameters (OpenAI, Groq, Claude, Gemini, DeepSeek). |
-| `ROLE_RECRUITER` | Hiring manager. Creates and edits job postings, reviews candidate applications, updates candidate pipeline statuses, conducts interviews, and views AI resume evaluation reports. |
-| `ROLE_CANDIDATE` | Job seeker. Registers with unique Instagram-style `@username`, searches open job listings, uploads resume documents, submits applications, and manages application withdrawals. |
+| `ROLE_ADMIN` | **System Administrator**: Full platform governance, Company Admin provisioning, scalable paginated user management, self-protected status controls, and system policy configuration. |
+| `ROLE_COMPANY_ADMIN` | **Enterprise Admin**: Recruiter provisioning and management, company job posting oversight, and AI screening configuration for the organization. |
+| `ROLE_RECRUITER` | **Hiring Manager**: Job posting management, applicant resume review, interview scheduling, pipeline status updates, and AI evaluation report access. |
+| `ROLE_CANDIDATE` | **Job Applicant**: Candidate profile management, job searching, application submission, resume management, and application withdrawal. |
+
+---
+
+## Multi-Provider AI Screening Engine
+
+The AI screening system evaluates candidate resumes against job descriptions through an abstraction layer supporting five Large Language Model providers:
+
+- **OpenAI**: Models `gpt-4o`, `gpt-3.5-turbo`
+- **Groq**: Models `llama-3.3-70b-versatile`, `mixtral-8x7b-32768`
+- **Anthropic Claude**: Models `claude-3-5-sonnet-20241022`, `claude-3-opus-20240229`
+- **Google Gemini**: Models `gemini-1.5-pro`, `gemini-1.5-flash`
+- **DeepSeek**: Models `deepseek-chat`, `deepseek-coder`
+
+### Key Capabilities
+- **Configurable Parameters**: Company Admins configure AI provider selection, API credentials, temperature, response token limits, and scoring system prompts per tenant.
+- **Multi-Dimensional Scoring**: Evaluates candidate resumes across Experience, Education, Projects, and Certifications (0–100 scale), generating strengths, weaknesses, matched skills, and missing skills.
+- **Recruiter Overrides & Audit Log**: Allows recruiters to submit manual score overrides, recording the reviewer ID, timestamp, and justification note.
+
+---
+
+## Tech Stack
+
+| Domain | Technologies |
+|---|---|
+| **Backend** | Java 21, Spring Boot 3.4.1, Spring Data JPA, Spring Security, Spring AI |
+| **Frontend** | React 18, Vite, Vanilla CSS (CSS custom properties, dark theme tokens) |
+| **Database** | MySQL 8 |
+| **Security** | JWT (jjwt 0.12.6), BCrypt Password Encoder |
+| **Build Tools** | Maven (Backend), npm & Vite (Frontend) |
+| **Documentation** | SpringDoc OpenAPI 3 (Swagger UI) |
 
 ---
 
 ## API Reference
 
-### Auth & Credentials — `/api/auth`
+### Authentication — `/api/auth`
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| POST | `/register` | Public | Register a candidate (Email, Password, Unique Username) |
-| POST | `/login` | Public | Authenticate user — returns JWT token & user metadata |
-| GET | `/check-username` | Public | Live check for username handle availability |
-| GET | `/me` | Authenticated | Retrieve current user profile details |
-| POST | `/change-password` | Authenticated | Mandatory first-time or regular password update |
+| POST | `/register` | Public | Register a candidate account |
+| POST | `/login` | Public | Authenticate user and issue JWT token |
+| GET | `/check-username` | Public | Verify username availability |
+| GET | `/me` | Authenticated | Fetch current user profile |
+| POST | `/change-password` | Authenticated | Change user password |
 
-### Super Admin Governance — `/api/admin`
-
-| Method | Endpoint | Access | Description |
-|---|---|---|---|
-| POST | `/company-admins` | Super Admin | Create a new Company Admin & company entity |
-| GET | `/users` | Super Admin | Fetch scalable paginated user directory (filters: `search`, `role`, `companyId`) |
-| PATCH | `/users/{userId}/status` | Super Admin | Toggle user status (`enabled=true/false`) for any account (self-protected) |
-
-### Company Admin Management — `/api/company-admin`
+### System Administration — `/api/admin`
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| POST | `/recruiters` | Company Admin | Create a recruiter for the admin's company |
-| GET | `/recruiters` | Company Admin | Fetch paginated list of recruiters for the company |
-| PATCH | `/recruiters/{userId}/status` | Company Admin | Toggle recruiter status (`enabled=true/false`) |
-| GET | `/ai-config` | Company Admin | Retrieve active company AI screening configuration |
-| POST | `/ai-config` | Company Admin | Save AI provider settings (`OPENAI`, `GROQ`, `CLAUDE`, `GEMINI`, `DEEPSEEK`) |
+| POST | `/company-admins` | System Admin | Provision a new Company Admin and company record |
+| GET | `/users` | System Admin | Paginated user directory search and role filtering |
+| PATCH | `/users/{userId}/status` | System Admin | Enable or disable a user account |
 
-### Jobs — `/api/jobs`
+### Company Administration — `/api/company-admin`
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| POST | `/` | Recruiter, Admin | Post a new job listing |
-| GET | `/` | Authenticated | Query jobs (Paginated, searchable) |
-| GET | `/{id}` | Authenticated | Get job details and applicant counts |
-| PUT | `/{id}` | Recruiter, Admin | Update job posting details |
-| DELETE | `/{id}` | Recruiter, Admin | Delete job listing |
+| POST | `/recruiters` | Company Admin | Provision a recruiter account |
+| GET | `/recruiters` | Company Admin | Paginated recruiter directory for the company |
+| PATCH | `/recruiters/{userId}/status` | Company Admin | Enable or disable a recruiter account |
+| GET | `/ai-config` | Company Admin | Fetch active company AI screening configuration |
+| POST | `/ai-config` | Company Admin | Update AI provider, credentials, and parameters |
 
-### Applications — `/api/applications`
+### Job Management — `/api/jobs`
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| POST | `/apply/{jobId}` | Candidate | Apply to job (Unique check & resume verification) |
-| GET | `/me` | Candidate, Admin | List candidate's applications |
-| GET | `/job/{jobId}` | Recruiter, Admin | List applications for a job posting |
-| PATCH | `/{id}/status` | Recruiter, Admin | Update application status in pipeline |
-| POST | `/{id}/withdraw` | Candidate, Admin | Soft-withdraw application |
-| GET | `/{id}/timeline` | Authenticated | Get status transition audit timeline |
+| POST | `/` | Recruiter, Admin | Create a new job listing |
+| GET | `/` | Authenticated | List and search job postings |
+| GET | `/{id}` | Authenticated | Retrieve job posting details |
+| PUT | `/{id}` | Recruiter, Admin | Update job listing details |
+| DELETE | `/{id}` | Recruiter, Admin | Delete a job listing |
+
+### Candidate Applications — `/api/applications`
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| POST | `/apply/{jobId}` | Candidate | Submit application with resume validation |
+| GET | `/me` | Candidate, Admin | Retrieve applications for current candidate |
+| GET | `/job/{jobId}` | Recruiter, Admin | Retrieve applications submitted to a job |
+| PATCH | `/{id}/status` | Recruiter, Admin | Update candidate application status |
+| POST | `/{id}/withdraw` | Candidate, Admin | Soft-withdraw an application |
+| GET | `/{id}/timeline` | Authenticated | Retrieve application status transition log |
 
 ---
 
-## Database Design
-
-Key MySQL relational schema representation:
+## Database Schema
 
 ```
 ┌──────────────┐          ┌──────────────┐          ┌────────────────────┐
@@ -195,8 +174,7 @@ Key MySQL relational schema representation:
 └──────────────┘          │ email (UQ)   │<─────────│ ai_provider        │
                           │ password     │          │ api_key            │
                           │ full_name    │          │ model_name         │
-                          │ pwd_change_req          └────────────────────┘
-                          │ company_id   │
+                          │ company_id   │          └────────────────────┘
                           └──────────────┘
                                  │1
                                  │*
@@ -213,47 +191,42 @@ Key MySQL relational schema representation:
 
 ---
 
-## Security & Authentication Implementation
+## Security & Access Control
 
-- **Stateless JWT Security**: Stateless sessions enforced via Spring Security and `JwtAuthenticationFilter`.
-- **Sort Property Whitelisting**: Sort keys validated against allowable property sets (`createdAt`, `fullName`, `username`, `email`, `id`) to prevent malicious SQL parameter injection.
-- **Pagination Lower-Bound Safeguards**: Rejects negative `page` values and caps max `size` parameters to 100 records.
-- **Conflict Exception Handling**: DB `DataIntegrityViolationException` events are caught and translated into HTTP `409 Conflict` responses.
-
----
-
-## File and Resume Storage
-
-- **Header Magic-Number Verification**: Binary mime-type checking verifies file integrity before storing to disk.
-- **Disk Pruning**: Re-uploading a resume automatically prunes previous files to conserve disk storage.
-- **Authenticated Binary Streaming**: Resumes are served securely through authenticated controllers.
+- **Stateless Authentication**: Requests are validated via `JwtAuthenticationFilter` with stateless Spring Security session management.
+- **Parameter Validation & Whitelisting**: Sort fields are validated against an allowed set (`createdAt`, `fullName`, `username`, `email`, `id`) to prevent property injection attacks.
+- **Resource Ownership Constraints**: Recruiters can only modify jobs and review applicants associated with their organization. Candidates can only access their own profile and application records.
+- **Data Integrity Protection**: Unique constraints handle duplicate applications and registration collisions cleanly without unhandled server errors.
 
 ---
 
-## Running Locally
+## Installation and Setup
 
 ### Prerequisites
 - Java 21 JDK
-- Maven 3.x
-- Node.js 18+ & npm
-- Docker (for MySQL instance)
+- Maven 3.8+
+- Node.js 18+ and npm
+- Docker and Docker Compose
 
-### 1. Launch MySQL Database
+### 1. Database Setup
+Launch the MySQL database container:
 ```bash
 docker compose up -d
 ```
 
-### 2. Launch Backend API
+### 2. Backend Service
+Build and run the Spring Boot API:
 ```bash
 cd backend
 ./mvnw spring-boot:run
 ```
-*API Server listens on `http://localhost:8080`.*
+The server will start at `http://localhost:8080`.
 
-### 3. Launch Frontend Development Server
+### 3. Frontend Application
+Install dependencies and run the development server:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-*Application opens on `http://localhost:5173`.*
+The application will be accessible at `http://localhost:5173`.
