@@ -395,10 +395,8 @@ const Dashboard = ({ section = 'dashboard' }) => {
                                                     </span>
                                                 </td>
                                                 <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
-                                                    {(u.id === user?.id || u.username === user?.username || u.role === 'ADMIN' || u.role === 'ROLE_ADMIN') ? (
-                                                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontStyle: 'italic', padding: '0.25rem 0.5rem', backgroundColor: 'var(--bg-secondary)', borderRadius: '4px' }}>
-                                                            System Protected
-                                                        </span>
+                                                    {(u.id === user?.id || u.username === user?.username) ? (
+                                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>-</span>
                                                     ) : (
                                                         <button
                                                             className={`btn btn-sm ${u.enabled ? 'btn-ghost' : 'btn-primary'}`}
