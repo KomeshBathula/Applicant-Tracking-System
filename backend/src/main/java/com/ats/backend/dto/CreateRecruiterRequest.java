@@ -27,5 +27,9 @@ public class CreateRecruiterRequest {
     private String email;
 
     @NotBlank(message = "Initial password is required")
+    @jakarta.validation.constraints.Pattern(
+        regexp = "^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]).{8,}$",
+        message = "Initial password must be at least 8 characters long and contain at least one capital letter, one number, and one special character"
+    )
     private String password;
 }

@@ -307,6 +307,12 @@ const Dashboard = ({ section = 'dashboard' }) => {
             return;
         }
 
+        const pwd = recruiterPassword;
+        if (pwd.length < 8 || !/[A-Z]/.test(pwd) || !/[0-9]/.test(pwd) || !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)) {
+            setRecruiterModalError('Initial password must be at least 8 characters long and contain at least one capital letter, one number, and one special character.');
+            return;
+        }
+
         if (recruiterUsernameStatus !== 'available') {
             setRecruiterModalError('Please enter an available username.');
             return;
@@ -1270,11 +1276,14 @@ const Dashboard = ({ section = 'dashboard' }) => {
                                         type="password"
                                         id="recPassword"
                                         className="form-control"
-                                        placeholder="Default password (User updates on 1st login)"
+                                        placeholder="e.g. RecruiterPass@123"
                                         value={recruiterPassword}
                                         onChange={(e) => setRecruiterPassword(e.target.value)}
                                         required
                                     />
+                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                                        Must be &ge;8 chars, contain 1 capital letter, 1 number, and 1 special char. Recruiter will be forced to change this on initial login.
+                                    </p>
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '0.75rem' }}>

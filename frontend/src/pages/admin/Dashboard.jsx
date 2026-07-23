@@ -127,6 +127,12 @@ const Dashboard = ({ section = 'dashboard' }) => {
             return;
         }
 
+        const pwd = password;
+        if (pwd.length < 8 || !/[A-Z]/.test(pwd) || !/[0-9]/.test(pwd) || !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)) {
+            setModalError('Initial password must be at least 8 characters long and contain at least one capital letter, one number, and one special character.');
+            return;
+        }
+
         if (usernameStatus !== 'available') {
             setModalError('Please enter a valid and available username.');
             return;
