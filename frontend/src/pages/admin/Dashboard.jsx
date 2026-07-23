@@ -515,29 +515,108 @@ const Dashboard = ({ section = 'dashboard' }) => {
             {activeTab === 'settings' && (
                 <div className="card">
                     <div className="card-header">
-                        <h3 className="card-title">System Governance & Security Policy</h3>
-                        <p className="card-subtitle">Global platform parameters, authentication rules, and database compliance</p>
+                        <h3 className="card-title">System Governance & Control Center</h3>
+                        <p className="card-subtitle">Global security policies, authentication rules, email gateways, and infrastructure parameters</p>
                     </div>
-                    <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '1.25rem', backgroundColor: 'var(--bg-secondary)' }}>
-                            <h4 style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Password Security & First-Time Reset Policy</h4>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-                                Enforced Rules: Password length &gt;= 8, 1 Capital letter, 1 Number, 1 Special character. All newly provisioned accounts (Company Admins & Recruiters) must update their default password on initial login before gaining access.
-                            </p>
+                    <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        {/* Governance Category 1: Security & Auth */}
+                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '1.5rem', backgroundColor: 'var(--bg-secondary)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <h4 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>
+                                    Authentication & Password Security Governance
+                                </h4>
+                                <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>Enforced</span>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', fontSize: '0.85rem' }}>
+                                <div>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Min Password Length:</span>
+                                    <strong style={{ display: 'block', color: 'var(--text-primary)', marginTop: '0.2rem' }}>8 Characters</strong>
+                                </div>
+                                <div>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Required Complexity:</span>
+                                    <strong style={{ display: 'block', color: 'var(--text-primary)', marginTop: '0.2rem' }}>1 Uppercase, 1 Number, 1 Special Char</strong>
+                                </div>
+                                <div>
+                                    <span style={{ color: 'var(--text-secondary)' }}>First-Time Password Reset:</span>
+                                    <strong style={{ display: 'block', color: 'var(--success-color)', marginTop: '0.2rem' }}>Mandatory On 1st Login</strong>
+                                </div>
+                                <div>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Session Authentication:</span>
+                                    <strong style={{ display: 'block', color: 'var(--text-primary)', marginTop: '0.2rem' }}>Stateless JWT (24h Expiry)</strong>
+                                </div>
+                            </div>
                         </div>
 
-                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '1.25rem', backgroundColor: 'var(--bg-secondary)' }}>
-                            <h4 style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Database Scalability & Pagination Policy</h4>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-                                All user management endpoints use Spring Data JPA `Pageable` queries with indexed filters on `username`, `email`, and `roleName`, capping max page size to 100 items to protect server memory.
-                            </p>
+                        {/* Governance Category 2: Email & Gateway */}
+                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '1.5rem', backgroundColor: 'var(--bg-secondary)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <h4 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>
+                                    System Mail & SMTP Notification Gateway
+                                </h4>
+                                <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>SMTP Ready</span>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', fontSize: '0.85rem' }}>
+                                <div>
+                                    <span style={{ color: 'var(--text-secondary)' }}>SMTP Mail Host:</span>
+                                    <strong style={{ display: 'block', color: 'var(--text-primary)', marginTop: '0.2rem' }}>smtp.gmail.com:587</strong>
+                                </div>
+                                <div>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Sender Address:</span>
+                                    <strong style={{ display: 'block', color: 'var(--text-primary)', marginTop: '0.2rem' }}>noreply@ats-system.com</strong>
+                                </div>
+                                <div>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Automated Password Reset Emails:</span>
+                                    <strong style={{ display: 'block', color: 'var(--success-color)', marginTop: '0.2rem' }}>Enabled</strong>
+                                </div>
+                            </div>
                         </div>
 
-                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '1.25rem', backgroundColor: 'var(--bg-secondary)' }}>
-                            <h4 style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>JWT Token & Session Security</h4>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-                                Stateless JWT Authentication enabled. 401 Unauthorized responses trigger automatic session termination and storage cleanup.
-                            </p>
+                        {/* Governance Category 3: Resume Storage & Files */}
+                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '1.5rem', backgroundColor: 'var(--bg-secondary)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <h4 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>
+                                    Candidate Resume Storage & File Policy
+                                </h4>
+                                <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>Local Storage</span>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', fontSize: '0.85rem' }}>
+                                <div>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Max Resume Upload Limit:</span>
+                                    <strong style={{ display: 'block', color: 'var(--text-primary)', marginTop: '0.2rem' }}>10 MB per File</strong>
+                                </div>
+                                <div>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Allowed Extensions:</span>
+                                    <strong style={{ display: 'block', color: 'var(--text-primary)', marginTop: '0.2rem' }}>.PDF, .DOCX, .DOC, .TXT</strong>
+                                </div>
+                                <div>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Parsing & Text Extraction:</span>
+                                    <strong style={{ display: 'block', color: 'var(--success-color)', marginTop: '0.2rem' }}>Apache Tika Engine Active</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Governance Category 4: AI & Database Infrastructure */}
+                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '1.5rem', backgroundColor: 'var(--bg-secondary)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <h4 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>
+                                    AI Multi-Provider & Scalable Database Infrastructure
+                                </h4>
+                                <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>Multi-LLM Active</span>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', fontSize: '0.85rem' }}>
+                                <div>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Supported AI Providers:</span>
+                                    <strong style={{ display: 'block', color: 'var(--primary-color)', marginTop: '0.2rem' }}>OpenAI, Groq, Claude, Gemini, DeepSeek</strong>
+                                </div>
+                                <div>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Scalable Query Pagination:</span>
+                                    <strong style={{ display: 'block', color: 'var(--text-primary)', marginTop: '0.2rem' }}>JPA Pageable (Max 100 records/page)</strong>
+                                </div>
+                                <div>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Database Engine:</span>
+                                    <strong style={{ display: 'block', color: 'var(--text-primary)', marginTop: '0.2rem' }}>MySQL (Indexed Filters)</strong>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
