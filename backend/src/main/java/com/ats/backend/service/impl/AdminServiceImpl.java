@@ -70,7 +70,14 @@ public class AdminServiceImpl implements AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("Role ROLE_COMPANY_ADMIN not found."));
 
         Company company = companyRepository.findByName(request.getCompanyName().trim())
-                .orElseGet(() -> companyRepository.save(Company.builder().name(request.getCompanyName().trim()).build()));
+                .orElseGet(() -> {
+                    try {
+                        return companyRepository.save(Company.builder().name(request.getCompanyName().trim()).build());
+                    } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                        return companyRepository.findByName(request.getCompanyName().trim())
+                                .orElseThrow(() -> new ConflictException("Company creation conflict for: " + request.getCompanyName()));
+                    }
+                });
 
         User user = User.builder()
                 .fullName(request.getFullName().trim())
@@ -83,8 +90,12 @@ public class AdminServiceImpl implements AdminService {
                 .passwordChangeRequired(true) // Force first-time password change
                 .build();
 
-        User savedUser = userRepository.save(user);
-        return userMapper.toDto(savedUser);
+        try {
+            User savedUser = userRepository.save(user);
+            return userMapper.toDto(savedUser);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new ConflictException("Username or email already exists.");
+        }
     }
 
     @Override

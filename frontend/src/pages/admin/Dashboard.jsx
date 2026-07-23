@@ -67,8 +67,13 @@ const Dashboard = ({ section = 'dashboard' }) => {
     useEffect(() => {
         if (activeTab !== 'users') return;
         const timer = setTimeout(() => {
-            setPage(0);
-            fetchUsers();
+            setPage((prevPage) => {
+                if (prevPage === 0) {
+                    fetchUsers();
+                    return 0;
+                }
+                return 0; // Trigger page-change effect which calls fetchUsers automatically
+            });
         }, 400);
         return () => clearTimeout(timer);
     }, [search]);

@@ -60,7 +60,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> changePassword(
             @Valid @RequestBody com.ats.backend.dto.ChangePasswordRequest request,
             org.springframework.security.core.Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
+        if (authentication == null || !authentication.isAuthenticated() || authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Unauthenticated user"));
         }
         authService.changePassword(authentication.getName(), request);

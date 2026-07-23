@@ -51,8 +51,14 @@ public class CompanyAdminController {
             @RequestParam(defaultValue = "DESC") String sortDir,
             Authentication authentication) {
         
-        Sort sort = sortDir.equalsIgnoreCase("ASC") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
-        Pageable pageable = PageRequest.of(page, Math.min(size, 100), sort);
+        int validPage = Math.max(0, page);
+        int validSize = Math.max(1, Math.min(size, 100));
+
+        java.util.Set<String> allowedSorts = java.util.Set.of("createdAt", "fullName", "username", "email", "id");
+        String cleanSortBy = allowedSorts.contains(sortBy) ? sortBy : "createdAt";
+
+        Sort sort = sortDir.equalsIgnoreCase("ASC") ? Sort.by(cleanSortBy).ascending() : Sort.by(cleanSortBy).descending();
+        Pageable pageable = PageRequest.of(validPage, validSize, sort);
 
         Page<UserDto> recruiters = companyAdminService.getRecruitersPaginated(authentication.getName(), search, pageable);
         return ResponseEntity.ok(ApiResponse.success("Recruiters retrieved successfully", recruiters));

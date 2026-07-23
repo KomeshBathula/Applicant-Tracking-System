@@ -91,8 +91,12 @@ public class CompanyAdminServiceImpl implements CompanyAdminService {
                 .passwordChangeRequired(true) // Force first-time password change for recruiter
                 .build();
 
-        User savedUser = userRepository.save(recruiter);
-        return userMapper.toDto(savedUser);
+        try {
+            User savedUser = userRepository.save(recruiter);
+            return userMapper.toDto(savedUser);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new ConflictException("Username or email already exists.");
+        }
     }
 
     @Override
@@ -119,6 +123,10 @@ public class CompanyAdminServiceImpl implements CompanyAdminService {
 
         if (recruiter.getCompany() == null || !recruiter.getCompany().getId().equals(companyAdmin.getCompany().getId())) {
             throw new AccessDeniedException("You can only manage recruiters within your own company.");
+        }
+
+        if (recruiter.getRole() == null || recruiter.getRole().getRoleName() != RoleName.ROLE_RECRUITER) {
+            throw new AccessDeniedException("Target user is not a recruiter.");
         }
 
         recruiter.setEnabled(enabled);
