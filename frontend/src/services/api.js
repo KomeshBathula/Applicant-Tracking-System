@@ -26,25 +26,29 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 401) {
+            // Do not redirect on authentication login attempts
+            if (error.config?.url?.includes('/auth/login')) {
+                return Promise.reject(error);
+            }
+
             // Token is expired, invalid, or missing
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             
             const currentPath = window.location.pathname;
+
+            // Do not redirect if already on a login or home page
+            if (currentPath === '/super-admin/login' || currentPath === '/company-admin/login' || currentPath === '/home' || currentPath === '/register') {
+                return Promise.reject(error);
+            }
             
-            // Redirect to the appropriate portal login page
+            // Redirect to appropriate login page on session expiry
             if (currentPath.startsWith('/admin')) {
-                if (!currentPath.includes('/admin/login')) {
-                    window.location.href = '/admin/login?expired=true';
-                }
+                window.location.href = '/super-admin/login?expired=true';
             } else if (currentPath.startsWith('/recruiter')) {
-                if (!currentPath.includes('/recruiter/login')) {
-                    window.location.href = '/recruiter/login?expired=true';
-                }
+                window.location.href = '/company-admin/login?expired=true';
             } else {
-                if (!currentPath.includes('/candidate/login')) {
-                    window.location.href = '/candidate/login?expired=true';
-                }
+                window.location.href = '/home?expired=true';
             }
         }
         return Promise.reject(error);
