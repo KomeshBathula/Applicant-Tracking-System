@@ -1,14 +1,171 @@
-import React, { useContext, useEffect } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import AppLayout from '../../components/AppLayout';
+import api from '../../services/api';
 
 const Dashboard = ({ section = 'dashboard' }) => {
-    const { user } = useContext(AuthContext);
+    const { user, checkUsername } = useContext(AuthContext);
     const activeTab = section;
+
+    // Paginated Users State (Super Admin User Management)
+    const [usersData, setUsersData] = useState({ content: [], totalPages: 0, totalElements: 0, number: 0, size: 10 });
+    const [page, setPage] = useState(0);
+    const [pageSize, setPageSize] = useState(10);
+    const [search, setSearch] = useState('');
+    const [roleFilter, setRoleFilter] = useState('ALL');
+    const [loadingUsers, setLoadingUsers] = useState(false);
+    const [usersError, setUsersError] = useState('');
+
+    // Create Company Admin Modal State
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [fullName, setFullName] = useState('');
+    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [companyName, setCompanyName] = useState('');
+    const [modalError, setModalError] = useState('');
+    const [modalSuccess, setModalSuccess] = useState('');
+    const [modalLoading, setModalLoading] = useState(false);
+
+    // Username check state for modal
+    const [usernameStatus, setUsernameStatus] = useState('idle');
+    const [usernameMessage, setUsernameMessage] = useState('');
 
     useEffect(() => {
         document.title = "Admin Control Center - ATS";
     }, []);
+
+    // Fetch Paginated Users
+    const fetchUsers = async () => {
+        setLoadingUsers(true);
+        setUsersError('');
+        try {
+            const params = {
+                page,
+                size: pageSize,
+                search: search.trim() || undefined,
+                role: roleFilter !== 'ALL' ? roleFilter : undefined
+            };
+            const response = await api.get('/admin/users', { params });
+            if (response.data && response.data.success && response.data.data) {
+                setUsersData(response.data.data);
+            }
+        } catch (err) {
+            setUsersError(err.response?.data?.message || 'Failed to fetch users');
+        } finally {
+            setLoadingUsers(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'users') {
+            fetchUsers();
+        }
+    }, [activeTab, page, pageSize, roleFilter]);
+
+    // Debounced search for users
+    useEffect(() => {
+        if (activeTab !== 'users') return;
+        const timer = setTimeout(() => {
+            setPage(0);
+            fetchUsers();
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    // Live Username Verification for Modal
+    useEffect(() => {
+        let isCurrent = true;
+        if (!username || username.trim().length === 0) {
+            setUsernameStatus('idle');
+            setUsernameMessage('');
+            return;
+        }
+
+        const clean = username.trim().toLowerCase();
+        const validFormat = /^[a-zA-Z0-9._]{3,30}$/.test(clean);
+        if (!validFormat) {
+            setUsernameStatus('invalid');
+            setUsernameMessage('3-30 characters (letters, numbers, underscores, or dots)');
+            return;
+        }
+
+        setUsernameStatus('checking');
+        setUsernameMessage('Checking availability...');
+
+        const timer = setTimeout(async () => {
+            const result = await checkUsername(clean);
+            if (isCurrent) {
+                if (result.available) {
+                    setUsernameStatus('available');
+                    setUsernameMessage('Username is available');
+                } else {
+                    setUsernameStatus('unavailable');
+                    setUsernameMessage(result.message || 'Username is not available');
+                }
+            }
+        }, 350);
+
+        return () => {
+            isCurrent = false;
+            clearTimeout(timer);
+        };
+    }, [username, checkUsername]);
+
+    const handleCreateCompanyAdmin = async (e) => {
+        e.preventDefault();
+        setModalError('');
+        setModalSuccess('');
+
+        if (!fullName.trim() || !email.trim() || !password || !companyName.trim()) {
+            setModalError('All fields are required.');
+            return;
+        }
+
+        if (usernameStatus !== 'available') {
+            setModalError('Please enter a valid and available username.');
+            return;
+        }
+
+        setModalLoading(true);
+        try {
+            const response = await api.post('/admin/company-admins', {
+                fullName: fullName.trim(),
+                username: username.trim().toLowerCase(),
+                email: email.trim(),
+                password,
+                companyName: companyName.trim()
+            });
+
+            if (response.data && response.data.success) {
+                setModalSuccess('Company Admin created successfully! First-time password update set.');
+                setFullName('');
+                setUsername('');
+                setEmail('');
+                setPassword('');
+                setCompanyName('');
+                setUsernameStatus('idle');
+                fetchUsers();
+                setTimeout(() => {
+                    setShowCreateModal(false);
+                    setModalSuccess('');
+                }, 1500);
+            }
+        } catch (err) {
+            setModalError(err.response?.data?.message || 'Failed to create Company Admin.');
+        } finally {
+            setModalLoading(false);
+        }
+    };
+
+    const handleToggleStatus = async (userId, currentEnabled) => {
+        try {
+            await api.patch(`/admin/users/${userId}/status?enabled=${!currentEnabled}`);
+            fetchUsers();
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to update user status.');
+        }
+    };
 
     const navigationItems = [
         { 
@@ -26,7 +183,7 @@ const Dashboard = ({ section = 'dashboard' }) => {
         },
         { 
             id: 'users', 
-            label: 'Users', 
+            label: 'Users Management', 
             path: '/admin/users',
             icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -65,22 +222,31 @@ const Dashboard = ({ section = 'dashboard' }) => {
         <AppLayout
             activeTab={activeTab}
             navigationItems={navigationItems}
-            roleTitle="Administrator"
+            roleTitle="Super Administrator"
             roleColor="var(--danger-color)"
         >
             {activeTab === 'dashboard' && (
                 <div>
                     <div className="card" style={{ background: 'linear-gradient(135deg, var(--danger-light) 0%, rgba(0,0,0,0) 100%)', border: '1px solid var(--border-color)' }}>
-                        <div className="card-body" style={{ padding: '2.5rem 2rem' }}>
-                            <h1 style={{ marginBottom: '0.5rem', fontWeight: 800 }}>Welcome, {user?.fullName}</h1>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', maxWidth: '640px' }}>Manage user directories, configure authorizations, and audit general portal diagnostics.</p>
+                        <div className="card-body" style={{ padding: '2.5rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <h1 style={{ marginBottom: '0.5rem', fontWeight: 800 }}>Welcome, {user?.fullName}</h1>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', maxWidth: '640px' }}>Super Admin Control Panel: Provision Company Admins, inspect scalable user directories, and manage access.</p>
+                            </div>
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => setShowCreateModal(true)}
+                                style={{ fontWeight: 700, padding: '0.75rem 1.25rem' }}
+                            >
+                                + Create Company Admin
+                            </button>
                         </div>
                     </div>
 
                     <div className="dashboard-grid dashboard-grid-2-1" style={{ marginTop: '1.5rem' }}>
                         <div className="card">
                             <div className="card-header">
-                                <h3 className="card-title">System Diagnostics</h3>
+                                <h3 className="card-title">System Infrastructure Status</h3>
                             </div>
                             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.9rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
@@ -88,24 +254,23 @@ const Dashboard = ({ section = 'dashboard' }) => {
                                     <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>Online</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
-                                    <span style={{ color: 'var(--text-secondary)' }}>Database Status</span>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Database Engine</span>
                                     <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>MySQL (Connected)</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-secondary)' }}>Hiring Postings Registered</span>
-                                    <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>Managed by Recruiter</span>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Scalable User Query Mode</span>
+                                    <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>Paginated JPA Queries</span>
                                 </div>
                             </div>
                         </div>
 
                         <div className="card">
                             <div className="card-header">
-                                <h3 className="card-title">Administrator Notice</h3>
+                                <h3 className="card-title">Role Privileges Summary</h3>
                             </div>
-                            <div className="card-body">
-                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: '1.6' }}>
-                                    All administrative actions executed in this control center are securely logged for compliance audits. Please keep database configurations unchanged.
-                                </p>
+                            <div className="card-body" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                                <p><strong>Super Admin:</strong> Creates Company Admins & manages global user directory with scalable pagination.</p>
+                                <p style={{ marginTop: '0.5rem' }}><strong>Company Admin:</strong> Provisions recruiters for their company & manages internal recruiters.</p>
                             </div>
                         </div>
                     </div>
@@ -114,32 +279,152 @@ const Dashboard = ({ section = 'dashboard' }) => {
 
             {activeTab === 'users' && (
                 <div className="card">
-                    <div className="card-header">
-                        <h3 className="card-title">User Management</h3>
-                        <p className="card-subtitle">Registered security credentials and roles</p>
+                    <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <h3 className="card-title">Scalable User Directory</h3>
+                            <p className="card-subtitle">Server-side paginated list of all system users ({usersData.totalElements || 0} total)</p>
+                        </div>
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => setShowCreateModal(true)}
+                            style={{ fontWeight: 600, fontSize: '0.9rem' }}
+                        >
+                            + Create Company Admin
+                        </button>
                     </div>
-                    <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-secondary)' }}>
-                            <div>
-                                <h4 style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.925rem' }}>admin@ats.com</h4>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>System Administrator</p>
+
+                    <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        {/* Filters Bar */}
+                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <div style={{ flex: 1, minWidth: '220px' }}>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder="Search by name, email, or @username..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                />
                             </div>
-                            <span className="badge badge-danger" style={{ fontSize: '0.75rem' }}>Active</span>
-                        </div>
-                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-secondary)' }}>
-                            <div>
-                                <h4 style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.925rem' }}>recruiter@ats.com</h4>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>Recruiter Workspace Moderator</p>
+
+                            <div style={{ width: '180px' }}>
+                                <select
+                                    className="form-control"
+                                    value={roleFilter}
+                                    onChange={(e) => { setRoleFilter(e.target.value); setPage(0); }}
+                                >
+                                    <option value="ALL">All Roles</option>
+                                    <option value="ADMIN">Super Admin</option>
+                                    <option value="COMPANY_ADMIN">Company Admin</option>
+                                    <option value="RECRUITER">Recruiter</option>
+                                    <option value="CANDIDATE">Candidate</option>
+                                </select>
                             </div>
-                            <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>Active</span>
-                        </div>
-                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-secondary)' }}>
-                            <div>
-                                <h4 style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.925rem' }}>candidate@ats.com</h4>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>Job Candidate</p>
+
+                            <div style={{ width: '120px' }}>
+                                <select
+                                    className="form-control"
+                                    value={pageSize}
+                                    onChange={(e) => { setPageSize(Number(e.target.value)); setPage(0); }}
+                                >
+                                    <option value={10}>10 / page</option>
+                                    <option value={25}>25 / page</option>
+                                    <option value={50}>50 / page</option>
+                                </select>
                             </div>
-                            <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>Active</span>
                         </div>
+
+                        {usersError && (
+                            <div className="alert alert-danger">{usersError}</div>
+                        )}
+
+                        {/* Paginated User Table */}
+                        {loadingUsers ? (
+                            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                Loading user directory...
+                            </div>
+                        ) : usersData.content.length === 0 ? (
+                            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                No users found matching current filters.
+                            </div>
+                        ) : (
+                            <div style={{ overflowX: 'auto' }}>
+                                <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
+                                            <th style={{ padding: '0.75rem 1rem' }}>User</th>
+                                            <th style={{ padding: '0.75rem 1rem' }}>Handle</th>
+                                            <th style={{ padding: '0.75rem 1rem' }}>Email</th>
+                                            <th style={{ padding: '0.75rem 1rem' }}>Role</th>
+                                            <th style={{ padding: '0.75rem 1rem' }}>Company</th>
+                                            <th style={{ padding: '0.75rem 1rem' }}>Status</th>
+                                            <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {usersData.content.map(u => (
+                                            <tr key={u.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                                <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>{u.fullName}</td>
+                                                <td style={{ padding: '0.85rem 1rem', color: 'var(--primary-color)', fontWeight: 500 }}>@{u.username}</td>
+                                                <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>{u.email}</td>
+                                                <td style={{ padding: '0.85rem 1rem' }}>
+                                                    <span className={`badge ${
+                                                        u.role === 'ADMIN' ? 'badge-danger' :
+                                                        u.role === 'COMPANY_ADMIN' ? 'badge-warning' :
+                                                        u.role === 'RECRUITER' ? 'badge-success' : 'badge-info'
+                                                    }`} style={{ fontSize: '0.75rem' }}>
+                                                        {u.role}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>
+                                                    {u.companyName || '-'}
+                                                </td>
+                                                <td style={{ padding: '0.85rem 1rem' }}>
+                                                    <span className={`badge ${u.enabled ? 'badge-success' : 'badge-danger'}`} style={{ fontSize: '0.75rem' }}>
+                                                        {u.enabled ? 'Active' : 'Disabled'}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                                                    {u.role !== 'ADMIN' && (
+                                                        <button
+                                                            className={`btn btn-sm ${u.enabled ? 'btn-ghost' : 'btn-primary'}`}
+                                                            onClick={() => handleToggleStatus(u.id, u.enabled)}
+                                                            style={{ fontSize: '0.8rem', padding: '0.25rem 0.65rem' }}
+                                                        >
+                                                            {u.enabled ? 'Disable' : 'Enable'}
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {/* Pagination Bar */}
+                        {usersData.totalPages > 1 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                    Page {usersData.number + 1} of {usersData.totalPages}
+                                </span>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <button
+                                        className="btn btn-secondary btn-sm"
+                                        disabled={usersData.number === 0}
+                                        onClick={() => setPage(p => Math.max(0, p - 1))}
+                                    >
+                                        Previous
+                                    </button>
+                                    <button
+                                        className="btn btn-secondary btn-sm"
+                                        disabled={usersData.number >= usersData.totalPages - 1}
+                                        onClick={() => setPage(p => p + 1)}
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -152,16 +437,16 @@ const Dashboard = ({ section = 'dashboard' }) => {
                     </div>
                     <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1.25rem', backgroundColor: 'var(--bg-secondary)' }}>
-                            <h4 style={{ color: 'var(--text-primary)', fontWeight: 600 }}>ROLE_ADMIN</h4>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.35rem', lineHeight: '1.5' }}>Full authorization to configure system properties, modify user access tokens, and monitor operations.</p>
+                            <h4 style={{ color: 'var(--text-primary)', fontWeight: 600 }}>ROLE_ADMIN (Super Admin)</h4>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.35rem', lineHeight: '1.5' }}>Provisions Company Admins, inspects scalable paginated user directories, and manages system settings.</p>
+                        </div>
+                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1.25rem', backgroundColor: 'var(--bg-secondary)' }}>
+                            <h4 style={{ color: 'var(--text-primary)', fontWeight: 600 }}>ROLE_COMPANY_ADMIN</h4>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.35rem', lineHeight: '1.5' }}>Provisions recruiters for their specific enterprise company, configures AI screening thresholds, and manages company job postings.</p>
                         </div>
                         <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1.25rem', backgroundColor: 'var(--bg-secondary)' }}>
                             <h4 style={{ color: 'var(--text-primary)', fontWeight: 600 }}>ROLE_RECRUITER</h4>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.35rem', lineHeight: '1.5' }}>Authorization to manage hiring listings, edit/publish job parameters, and review candidate directories.</p>
-                        </div>
-                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1.25rem', backgroundColor: 'var(--bg-secondary)' }}>
-                            <h4 style={{ color: 'var(--text-primary)', fontWeight: 600 }}>ROLE_CANDIDATE</h4>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.35rem', lineHeight: '1.5' }}>Authorization to search active job opportunities, submit personal resume attachments, and track submissions.</p>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.35rem', lineHeight: '1.5' }}>Authorization to manage hiring listings, edit/publish job parameters, and review candidate applications.</p>
                         </div>
                     </div>
                 </div>
@@ -175,12 +460,139 @@ const Dashboard = ({ section = 'dashboard' }) => {
                     <div className="card-body">
                         <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>Configure session properties and workspace parameters.</p>
                         <div style={{ border: '1px dashed var(--border-color)', borderRadius: '8px', padding: '3rem 1.5rem', textAlign: 'center', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-secondary)' }}>
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-                                <circle cx="12" cy="12" r="3"></circle>
-                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                            </svg>
                             <p style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-primary)' }}>Standard Configurations Active</p>
                             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>Global credentials and security filter rules are managed dynamically via Spring Security Context.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Create Company Admin */}
+            {showCreateModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.6)',
+                    backdropFilter: 'blur(4px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    padding: '1rem'
+                }}>
+                    <div className="card" style={{ maxWidth: '460px', width: '100%', borderRadius: '14px', backgroundColor: 'var(--bg-primary)' }}>
+                        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 className="card-title" style={{ fontSize: '1.2rem', fontWeight: 700 }}>Create Company Admin</h3>
+                            <button
+                                className="btn btn-ghost btn-sm"
+                                onClick={() => setShowCreateModal(false)}
+                                style={{ fontSize: '1.1rem', lineHeight: 1 }}
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="card-body">
+                            {modalError && <div className="alert alert-danger" style={{ marginBottom: '1rem' }}>{modalError}</div>}
+                            {modalSuccess && <div className="alert alert-success" style={{ marginBottom: '1rem' }}>{modalSuccess}</div>}
+
+                            <form onSubmit={handleCreateCompanyAdmin} noValidate>
+                                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                                    <label className="form-label" htmlFor="caFullName">Full Name</label>
+                                    <input
+                                        type="text"
+                                        id="caFullName"
+                                        className="form-control"
+                                        placeholder="e.g. Sarah Jenkins"
+                                        value={fullName}
+                                        onChange={(e) => setFullName(e.target.value)}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                                    <label className="form-label" htmlFor="caCompanyName">Company Name</label>
+                                    <input
+                                        type="text"
+                                        id="caCompanyName"
+                                        className="form-control"
+                                        placeholder="e.g. Acme Corp"
+                                        value={companyName}
+                                        onChange={(e) => setCompanyName(e.target.value)}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <label className="form-label" htmlFor="caUsername">Username Handle</label>
+                                        {usernameStatus !== 'idle' && (
+                                            <span style={{
+                                                fontSize: '0.78rem',
+                                                fontWeight: 600,
+                                                color: usernameStatus === 'available' ? 'var(--success-color)' :
+                                                       usernameStatus === 'checking' ? 'var(--text-secondary)' : 'var(--danger-color)'
+                                            }}>
+                                                {usernameMessage}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <input
+                                        type="text"
+                                        id="caUsername"
+                                        className="form-control"
+                                        placeholder="sarah_admin"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                                    <label className="form-label" htmlFor="caEmail">Work Email</label>
+                                    <input
+                                        type="email"
+                                        id="caEmail"
+                                        className="form-control"
+                                        placeholder="sarah@acme.com"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                                    <label className="form-label" htmlFor="caPassword">Initial Default Password</label>
+                                    <input
+                                        type="password"
+                                        id="caPassword"
+                                        className="form-control"
+                                        placeholder="Default password (User must update on 1st login)"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                    />
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={() => setShowCreateModal(false)}
+                                        style={{ flex: 1 }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="btn btn-primary"
+                                        disabled={modalLoading || usernameStatus !== 'available'}
+                                        style={{ flex: 2, fontWeight: 700 }}
+                                    >
+                                        {modalLoading ? 'Creating...' : 'Create Company Admin'}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>

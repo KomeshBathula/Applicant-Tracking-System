@@ -9,4 +9,5 @@ public interface AuthService {
     UserDto registerUser(RegisterRequest registerRequest);
     AuthResponse authenticateUser(LoginRequest loginRequest);
     boolean isUsernameAvailable(String username);
+    void changePassword(String currentUsernameOrEmail, com.ats.backend.dto.ChangePasswordRequest request);
 }

@@ -132,4 +132,30 @@ public class AuthServiceImpl implements AuthService {
         }
         return !userRepository.existsByUsername(username.trim().toLowerCase(java.util.Locale.ROOT));
     }
+
+    @Override
+    @Transactional
+    public void changePassword(String currentUsernameOrEmail, com.ats.backend.dto.ChangePasswordRequest request) {
+        String identifier = currentUsernameOrEmail != null ? currentUsernameOrEmail.trim() : "";
+        String cleanUsername = identifier.toLowerCase(java.util.Locale.ROOT);
+
+        User user = userRepository.findByEmailOrUsername(identifier, cleanUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + currentUsernameOrEmail));
+
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new com.ats.backend.exception.InvalidRequestException("Old password does not match.");
+        }
+
+        String pwd = request.getNewPassword();
+        if (pwd == null || pwd.length() < 8 
+                || !pwd.matches(".*[A-Z].*") 
+                || !pwd.matches(".*[0-9].*") 
+                || !pwd.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?].*")) {
+            throw new com.ats.backend.exception.InvalidRequestException("New password must be at least 8 characters long and contain at least one capital letter, one number, and one special character.");
+        }
+
+        user.setPassword(passwordEncoder.encode(pwd));
+        user.setPasswordChangeRequired(false);
+        userRepository.save(user);
+    }
 }

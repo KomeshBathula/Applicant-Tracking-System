@@ -88,6 +88,25 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const changePassword = async (oldPassword, newPassword) => {
+        try {
+            const response = await api.post('/auth/change-password', { oldPassword, newPassword });
+            if (response.data && response.data.success) {
+                if (user) {
+                    const updated = { ...user, passwordChangeRequired: false };
+                    localStorage.setItem('user', JSON.stringify(updated));
+                    setUser(updated);
+                }
+                return { success: true };
+            } else {
+                return { success: false, message: response.data.message || 'Password change failed' };
+            }
+        } catch (error) {
+            const message = error.response?.data?.message || 'Failed to change password';
+            return { success: false, message };
+        }
+    };
+
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -101,7 +120,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, loading, login, register, checkUsername, logout, setUser: updateUserInContext }}>
+        <AuthContext.Provider value={{ user, token, loading, login, register, checkUsername, changePassword, logout, setUser: updateUserInContext }}>
             {children}
         </AuthContext.Provider>
     );

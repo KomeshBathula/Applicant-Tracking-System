@@ -17,4 +17,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
     boolean existsByUsername(String username);
     Page<User> findByRoleRoleName(RoleName roleName, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Query("SELECT u FROM User u WHERE " +
+            "(:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(u.username) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+            "(:roleName IS NULL OR u.role.roleName = :roleName) AND " +
+            "(:companyId IS NULL OR u.company.id = :companyId)")
+    Page<User> findUsersWithFilters(
+            @org.springframework.data.repository.query.Param("search") String search,
+            @org.springframework.data.repository.query.Param("roleName") RoleName roleName,
+            @org.springframework.data.repository.query.Param("companyId") Long companyId,
+            Pageable pageable);
 }

@@ -2,6 +2,7 @@ import React, { useContext, useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
+import ChangePasswordModal from './ChangePasswordModal';
 import api from '../services/api';
 
 const formatTimeAgo = (dateString) => {
@@ -325,6 +326,7 @@ const AppLayout = ({ children, activeTab, navigationItems, roleTitle, roleColor 
                     {children}
                 </main>
             </div>
+            <ChangePasswordModal />
         </div>
     );
 };

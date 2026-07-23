@@ -9,11 +9,32 @@ import Pagination from '../../components/Pagination';
 import JobForm from '../../components/JobForm';
 
 const Dashboard = ({ section = 'dashboard' }) => {
-    const { user, logout } = useContext(AuthContext);
+    const { user, logout, checkUsername } = useContext(AuthContext);
     const navigate = useNavigate();
     const activeTab = section;
     const setActiveTab = (tab) => navigate(`/recruiter/${tab}`);
-    
+
+    // Recruiters Management State (Company Admin)
+    const [recruitersData, setRecruitersData] = useState({ content: [], totalPages: 0, totalElements: 0, number: 0 });
+    const [recruiterPage, setRecruiterPage] = useState(0);
+    const [recruiterSearch, setRecruiterSearch] = useState('');
+    const [loadingRecruiters, setLoadingRecruiters] = useState(false);
+    const [recruitersError, setRecruitersError] = useState('');
+
+    // Add Recruiter Modal State
+    const [showAddRecruiterModal, setShowAddRecruiterModal] = useState(false);
+    const [recruiterFullName, setRecruiterFullName] = useState('');
+    const [recruiterUsername, setRecruiterUsername] = useState('');
+    const [recruiterEmail, setRecruiterEmail] = useState('');
+    const [recruiterPassword, setRecruiterPassword] = useState('');
+    const [recruiterModalError, setRecruiterModalError] = useState('');
+    const [recruiterModalSuccess, setRecruiterModalSuccess] = useState('');
+    const [recruiterModalLoading, setRecruiterModalLoading] = useState(false);
+
+    // Username availability status for recruiter modal
+    const [recruiterUsernameStatus, setRecruiterUsernameStatus] = useState('idle');
+    const [recruiterUsernameMessage, setRecruiterUsernameMessage] = useState('');
+
     // Stats state
     const [stats, setStats] = useState({ totalJobs: 0, openJobs: 0, closedJobs: 0 });
     const [loadingStats, setLoadingStats] = useState(false);
@@ -219,6 +240,116 @@ const Dashboard = ({ section = 'dashboard' }) => {
         }
     };
 
+    const fetchRecruiters = async (page = 0) => {
+        setLoadingRecruiters(true);
+        setRecruitersError('');
+        try {
+            const res = await api.get('/company-admin/recruiters', {
+                params: { page, size: 10, search: recruiterSearch.trim() || undefined }
+            });
+            if (res.data && res.data.success && res.data.data) {
+                setRecruitersData(res.data.data);
+                setRecruiterPage(page);
+            }
+        } catch (err) {
+            setRecruitersError(err.response?.data?.message || 'Failed to fetch recruiters.');
+        } finally {
+            setLoadingRecruiters(false);
+        }
+    };
+
+    // Live Username Verification for Recruiter Modal
+    useEffect(() => {
+        let isCurrent = true;
+        if (!recruiterUsername || recruiterUsername.trim().length === 0) {
+            setRecruiterUsernameStatus('idle');
+            setRecruiterUsernameMessage('');
+            return;
+        }
+
+        const clean = recruiterUsername.trim().toLowerCase();
+        const validFormat = /^[a-zA-Z0-9._]{3,30}$/.test(clean);
+        if (!validFormat) {
+            setRecruiterUsernameStatus('invalid');
+            setRecruiterUsernameMessage('3-30 characters (letters, numbers, underscores, or dots)');
+            return;
+        }
+
+        setRecruiterUsernameStatus('checking');
+        setRecruiterUsernameMessage('Checking availability...');
+
+        const timer = setTimeout(async () => {
+            const result = await checkUsername(clean);
+            if (isCurrent) {
+                if (result.available) {
+                    setRecruiterUsernameStatus('available');
+                    setRecruiterUsernameMessage('Username is available');
+                } else {
+                    setRecruiterUsernameStatus('unavailable');
+                    setRecruiterUsernameMessage(result.message || 'Username is not available');
+                }
+            }
+        }, 350);
+
+        return () => {
+            isCurrent = false;
+            clearTimeout(timer);
+        };
+    }, [recruiterUsername, checkUsername]);
+
+    const handleCreateRecruiter = async (e) => {
+        e.preventDefault();
+        setRecruiterModalError('');
+        setRecruiterModalSuccess('');
+
+        if (!recruiterFullName.trim() || !recruiterEmail.trim() || !recruiterPassword) {
+            setRecruiterModalError('All fields are required.');
+            return;
+        }
+
+        if (recruiterUsernameStatus !== 'available') {
+            setRecruiterModalError('Please enter an available username.');
+            return;
+        }
+
+        setRecruiterModalLoading(true);
+        try {
+            const res = await api.post('/company-admin/recruiters', {
+                fullName: recruiterFullName.trim(),
+                username: recruiterUsername.trim().toLowerCase(),
+                email: recruiterEmail.trim(),
+                password: recruiterPassword
+            });
+
+            if (res.data && res.data.success) {
+                setRecruiterModalSuccess('Recruiter created successfully! Mandatory first-time password change set.');
+                setRecruiterFullName('');
+                setRecruiterUsername('');
+                setRecruiterEmail('');
+                setRecruiterPassword('');
+                setRecruiterUsernameStatus('idle');
+                fetchRecruiters(0);
+                setTimeout(() => {
+                    setShowAddRecruiterModal(false);
+                    setRecruiterModalSuccess('');
+                }, 1500);
+            }
+        } catch (err) {
+            setRecruiterModalError(err.response?.data?.message || 'Failed to create recruiter.');
+        } finally {
+            setRecruiterModalLoading(false);
+        }
+    };
+
+    const handleToggleRecruiterStatus = async (recruiterId, currentEnabled) => {
+        try {
+            await api.patch(`/company-admin/recruiters/${recruiterId}/status?enabled=${!currentEnabled}`);
+            fetchRecruiters(recruiterPage);
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to update recruiter status.');
+        }
+    };
+
     useEffect(() => {
         document.title = "Recruiter Dashboard - ATS";
         if (activeTab === 'dashboard') {
@@ -231,6 +362,8 @@ const Dashboard = ({ section = 'dashboard' }) => {
             fetchInterviews();
         } else if (activeTab === 'ai-config') {
             fetchAiConfig();
+        } else if (activeTab === 'recruiters') {
+            fetchRecruiters(0);
         }
     }, [activeTab]);
 
@@ -816,6 +949,229 @@ const Dashboard = ({ section = 'dashboard' }) => {
                                 </div>
                             </form>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'recruiters' && (
+                <div className="card">
+                    <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <h3 className="card-title">Company Recruiters</h3>
+                            <p className="card-subtitle">Manage hiring team accounts and access for your enterprise</p>
+                        </div>
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => setShowAddRecruiterModal(true)}
+                            style={{ fontWeight: 600, fontSize: '0.9rem' }}
+                        >
+                            + Add Recruiter
+                        </button>
+                    </div>
+
+                    <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        {/* Search Filter */}
+                        <div style={{ maxWidth: '360px' }}>
+                            <input
+                                type="text"
+                                className="form-control"
+                                placeholder="Search recruiters by name, email, or handle..."
+                                value={recruiterSearch}
+                                onChange={(e) => setRecruiterSearch(e.target.value)}
+                            />
+                        </div>
+
+                        {recruitersError && <div className="alert alert-danger">{recruitersError}</div>}
+
+                        {loadingRecruiters ? (
+                            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                Loading company recruiters...
+                            </div>
+                        ) : recruitersData.content.length === 0 ? (
+                            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                No recruiters found for your company.
+                            </div>
+                        ) : (
+                            <div style={{ overflowX: 'auto' }}>
+                                <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
+                                            <th style={{ padding: '0.75rem 1rem' }}>Recruiter</th>
+                                            <th style={{ padding: '0.75rem 1rem' }}>Handle</th>
+                                            <th style={{ padding: '0.75rem 1rem' }}>Email</th>
+                                            <th style={{ padding: '0.75rem 1rem' }}>Status</th>
+                                            <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {recruitersData.content.map(r => (
+                                            <tr key={r.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                                <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>{r.fullName}</td>
+                                                <td style={{ padding: '0.85rem 1rem', color: 'var(--primary-color)', fontWeight: 500 }}>@{r.username}</td>
+                                                <td style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>{r.email}</td>
+                                                <td style={{ padding: '0.85rem 1rem' }}>
+                                                    <span className={`badge ${r.enabled ? 'badge-success' : 'badge-danger'}`} style={{ fontSize: '0.75rem' }}>
+                                                        {r.enabled ? 'Active' : 'Disabled'}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                                                    <button
+                                                        className={`btn btn-sm ${r.enabled ? 'btn-ghost' : 'btn-primary'}`}
+                                                        onClick={() => handleToggleRecruiterStatus(r.id, r.enabled)}
+                                                        style={{ fontSize: '0.8rem', padding: '0.25rem 0.65rem' }}
+                                                    >
+                                                        {r.enabled ? 'Disable' : 'Enable'}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {/* Pagination Bar */}
+                        {recruitersData.totalPages > 1 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                    Page {recruitersData.number + 1} of {recruitersData.totalPages}
+                                </span>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <button
+                                        className="btn btn-secondary btn-sm"
+                                        disabled={recruitersData.number === 0}
+                                        onClick={() => fetchRecruiters(recruiterPage - 1)}
+                                    >
+                                        Previous
+                                    </button>
+                                    <button
+                                        className="btn btn-secondary btn-sm"
+                                        disabled={recruitersData.number >= recruitersData.totalPages - 1}
+                                        onClick={() => fetchRecruiters(recruiterPage + 1)}
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Add Recruiter */}
+            {showAddRecruiterModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.6)',
+                    backdropFilter: 'blur(4px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    padding: '1rem'
+                }}>
+                    <div className="card" style={{ maxWidth: '440px', width: '100%', borderRadius: '14px', backgroundColor: 'var(--bg-primary)' }}>
+                        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 className="card-title" style={{ fontSize: '1.2rem', fontWeight: 700 }}>Add New Recruiter</h3>
+                            <button
+                                className="btn btn-ghost btn-sm"
+                                onClick={() => setShowAddRecruiterModal(false)}
+                                style={{ fontSize: '1.1rem', lineHeight: 1 }}
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="card-body">
+                            {recruiterModalError && <div className="alert alert-danger" style={{ marginBottom: '1rem' }}>{recruiterModalError}</div>}
+                            {recruiterModalSuccess && <div className="alert alert-success" style={{ marginBottom: '1rem' }}>{recruiterModalSuccess}</div>}
+
+                            <form onSubmit={handleCreateRecruiter} noValidate>
+                                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                                    <label className="form-label" htmlFor="recFullName">Full Name</label>
+                                    <input
+                                        type="text"
+                                        id="recFullName"
+                                        className="form-control"
+                                        placeholder="e.g. Alex Morgan"
+                                        value={recruiterFullName}
+                                        onChange={(e) => setRecruiterFullName(e.target.value)}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <label className="form-label" htmlFor="recUsername">Username Handle</label>
+                                        {recruiterUsernameStatus !== 'idle' && (
+                                            <span style={{
+                                                fontSize: '0.78rem',
+                                                fontWeight: 600,
+                                                color: recruiterUsernameStatus === 'available' ? 'var(--success-color)' :
+                                                       recruiterUsernameStatus === 'checking' ? 'var(--text-secondary)' : 'var(--danger-color)'
+                                            }}>
+                                                {recruiterUsernameMessage}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <input
+                                        type="text"
+                                        id="recUsername"
+                                        className="form-control"
+                                        placeholder="alex_recruiter"
+                                        value={recruiterUsername}
+                                        onChange={(e) => setRecruiterUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                                    <label className="form-label" htmlFor="recEmail">Work Email</label>
+                                    <input
+                                        type="email"
+                                        id="recEmail"
+                                        className="form-control"
+                                        placeholder="alex@company.com"
+                                        value={recruiterEmail}
+                                        onChange={(e) => setRecruiterEmail(e.target.value)}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                                    <label className="form-label" htmlFor="recPassword">Initial Default Password</label>
+                                    <input
+                                        type="password"
+                                        id="recPassword"
+                                        className="form-control"
+                                        placeholder="Default password (User updates on 1st login)"
+                                        value={recruiterPassword}
+                                        onChange={(e) => setRecruiterPassword(e.target.value)}
+                                        required
+                                    />
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={() => setShowAddRecruiterModal(false)}
+                                        style={{ flex: 1 }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="btn btn-primary"
+                                        disabled={recruiterModalLoading || recruiterUsernameStatus !== 'available'}
+                                        style={{ flex: 2, fontWeight: 700 }}
+                                    >
+                                        {recruiterModalLoading ? 'Adding...' : 'Add Recruiter'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             )}
