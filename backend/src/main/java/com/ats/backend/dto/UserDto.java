@@ -18,6 +18,7 @@ public class UserDto {
     private String email;
     private String role;
     private boolean enabled;
+    private boolean passwordChangeRequired;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String resumeUrl;

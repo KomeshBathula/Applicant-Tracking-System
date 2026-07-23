@@ -18,6 +18,7 @@ public class UserMapper {
                 .email(user.getEmail())
                 .role(user.getRole().getRoleName().name())
                 .enabled(user.isEnabled())
+                .passwordChangeRequired(user.isPasswordChangeRequired())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .resumeUrl(user.getResumeUrl())

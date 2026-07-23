@@ -54,4 +54,16 @@ public class AuthController {
         String message = available ? "Username is available" : "Username is not available";
         return ResponseEntity.ok(ApiResponse.success(message, data));
     }
+
+    @PostMapping("/change-password")
+    @Operation(summary = "Change user password", description = "Allows an authenticated user to change default or current password.")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody com.ats.backend.dto.ChangePasswordRequest request,
+            org.springframework.security.core.Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated() || authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Unauthenticated user"));
+        }
+        authService.changePassword(authentication.getName(), request);
+        return ResponseEntity.ok(ApiResponse.success("Password changed successfully", null));
+    }
 }

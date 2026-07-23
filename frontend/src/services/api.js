@@ -26,14 +26,14 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 401) {
-            // Do not redirect on authentication login attempts
-            if (error.config?.url?.includes('/auth/login')) {
-                return Promise.reject(error);
-            }
-
             // Token is expired, invalid, or missing
             localStorage.removeItem('token');
             localStorage.removeItem('user');
+
+            // Do not redirect on authentication login attempts or password updates
+            if (error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/change-password')) {
+                return Promise.reject(error);
+            }
             
             const currentPath = window.location.pathname;
 
