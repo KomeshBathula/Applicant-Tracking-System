@@ -34,22 +34,19 @@ public class DatabaseInitializer implements CommandLineRunner {
         }
 
         // Initialize a default ADMIN, COMPANY_ADMIN, RECRUITER, and CANDIDATE for testing convenience
-        if (userRepository.count() == 0) {
-            Role adminRole = roleRepository.findByRoleName(RoleName.ROLE_ADMIN).orElseThrow();
-            Role companyAdminRole = roleRepository.findByRoleName(RoleName.ROLE_COMPANY_ADMIN).orElseThrow();
-            Role recruiterRole = roleRepository.findByRoleName(RoleName.ROLE_RECRUITER).orElseThrow();
-            Role candidateRole = roleRepository.findByRoleName(RoleName.ROLE_CANDIDATE).orElseThrow();
+        Role adminRole = roleRepository.findByRoleName(RoleName.ROLE_ADMIN).orElseThrow();
+        Role companyAdminRole = roleRepository.findByRoleName(RoleName.ROLE_COMPANY_ADMIN).orElseThrow();
+        Role recruiterRole = roleRepository.findByRoleName(RoleName.ROLE_RECRUITER).orElseThrow();
+        Role candidateRole = roleRepository.findByRoleName(RoleName.ROLE_CANDIDATE).orElseThrow();
 
-            com.ats.backend.entity.Company defaultCompany = com.ats.backend.entity.Company.builder()
-                    .name("Acme Corp")
-                    .domain("acme.com")
-                    .hiringPreferences("Prefers candidates with strong hands-on coding and systems knowledge.")
-                    .build();
-            // We need to inject CompanyRepository to save it, or we can just save via a new field
-            // Wait, let's see if we should inject CompanyRepository. Let's do that!
-            // First let's write out the logic with companyRepository.
-            defaultCompany = companyRepository.save(defaultCompany);
+        com.ats.backend.entity.Company defaultCompany = companyRepository.findByName("Acme Corp")
+                .orElseGet(() -> companyRepository.save(com.ats.backend.entity.Company.builder()
+                        .name("Acme Corp")
+                        .domain("acme.com")
+                        .hiringPreferences("Prefers candidates with strong hands-on coding and systems knowledge.")
+                        .build()));
 
+        if (userRepository.findByEmailOrUsername("admin@ats.com", "admin").isEmpty()) {
             userRepository.save(User.builder()
                     .fullName("System Admin")
                     .username("admin")
@@ -58,7 +55,10 @@ public class DatabaseInitializer implements CommandLineRunner {
                     .role(adminRole)
                     .enabled(true)
                     .build());
+            System.out.println("Seeded Super Admin: admin@ats.com / admin123");
+        }
 
+        if (userRepository.findByEmailOrUsername("companyadmin@ats.com", "companyadmin").isEmpty()) {
             userRepository.save(User.builder()
                     .fullName("Alice Admin")
                     .username("companyadmin")
@@ -68,7 +68,10 @@ public class DatabaseInitializer implements CommandLineRunner {
                     .company(defaultCompany)
                     .enabled(true)
                     .build());
+            System.out.println("Seeded Company Admin: companyadmin@ats.com / companyadmin123");
+        }
 
+        if (userRepository.findByEmailOrUsername("recruiter@ats.com", "recruiter").isEmpty()) {
             userRepository.save(User.builder()
                     .fullName("John Recruiter")
                     .username("recruiter")
@@ -78,7 +81,10 @@ public class DatabaseInitializer implements CommandLineRunner {
                     .company(defaultCompany)
                     .enabled(true)
                     .build());
+            System.out.println("Seeded Recruiter: recruiter@ats.com / recruiter123");
+        }
 
+        if (userRepository.findByEmailOrUsername("candidate@ats.com", "candidate").isEmpty()) {
             userRepository.save(User.builder()
                     .fullName("Jane Candidate")
                     .username("candidate")
@@ -87,12 +93,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     .role(candidateRole)
                     .enabled(true)
                     .build());
-
-            System.out.println("ATS System initialized with default users:");
-            System.out.println("  Admin: admin@ats.com / admin123");
-            System.out.println("  Company Admin: companyadmin@ats.com / companyadmin123");
-            System.out.println("  Recruiter: recruiter@ats.com / recruiter123");
-            System.out.println("  Candidate: candidate@ats.com / candidate123");
+            System.out.println("Seeded Candidate: candidate@ats.com / candidate123");
         }
     }
 }
