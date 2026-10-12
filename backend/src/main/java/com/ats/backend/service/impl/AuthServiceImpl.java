@@ -4,7 +4,6 @@ import com.ats.backend.dto.AuthResponse;
 import com.ats.backend.dto.LoginRequest;
 import com.ats.backend.dto.RegisterRequest;
 import com.ats.backend.dto.UserDto;
-import com.ats.backend.entity.Company;
 import com.ats.backend.entity.Role;
 import com.ats.backend.entity.RoleName;
 import com.ats.backend.entity.User;
